@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Document viewers (PDF, DOCX, XLSX) load their WebAssembly engines inside
 // `blob:`-URL Web Workers. Inside such a worker a bundler-emitted, root-relative
@@ -27,7 +28,7 @@ export const VIEWER_WASM_ASSETS = [
 ];
 
 function resolve(relativePath) {
-  return new URL(relativePath, import.meta.url).pathname;
+  return fileURLToPath(new URL(relativePath, import.meta.url));
 }
 
 /** Absolute paths of the `public/` wasm files the viewers require at runtime. */
