@@ -158,6 +158,18 @@ importers:
       '@hono/zod-openapi':
         specifier: ^0.19.10
         version: 0.19.10(hono@4.12.34)(zod@3.25.76)
+      '@logtail/node':
+        specifier: ^0.5.8
+        version: 0.5.8
+      '@scalar/hono-api-reference':
+        specifier: ^0.10.20
+        version: 0.10.20(hono@4.12.34)
+      '@sentry/bun':
+        specifier: ^10.47.0
+        version: 10.63.0(@opentelemetry/core@2.8.0)
+      '@supabase/supabase-js':
+        specifier: ^2.95.3
+        version: 2.110.0
       '@zed/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract
@@ -182,18 +194,6 @@ importers:
       '@zed/starter':
         specifier: workspace:*
         version: link:../../packages/starter
-      '@logtail/node':
-        specifier: ^0.5.8
-        version: 0.5.8
-      '@scalar/hono-api-reference':
-        specifier: ^0.10.20
-        version: 0.10.20(hono@4.12.34)
-      '@sentry/bun':
-        specifier: ^10.47.0
-        version: 10.63.0(@opentelemetry/core@2.8.0)
-      '@supabase/supabase-js':
-        specifier: ^2.95.3
-        version: 2.110.0
       agent-tunnel:
         specifier: workspace:@zed/agent-tunnel@*
         version: link:../../packages/agent-tunnel
@@ -243,15 +243,15 @@ importers:
       '@aws-crypto/sha256-js':
         specifier: 5.2.0
         version: 5.2.0
-      '@zed/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
       '@smithy/signature-v4':
         specifier: 5.6.2
         version: 5.6.2
       '@types/bun':
         specifier: ^1.3.12
         version: 1.3.14
+      '@zed/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       bun-types:
         specifier: ^1.3.12
         version: 1.3.14
@@ -312,7 +312,7 @@ importers:
         specifier: ^25.1.8
         version: 25.1.8(electron-builder-squirrel-windows@25.1.8)
 
-  apps/zed-sandbox-agent-server:
+  apps/kortix-sandbox-agent-server:
     dependencies:
       hono:
         specifier: 4.12.34
@@ -367,12 +367,6 @@ importers:
       '@gorhom/bottom-sheet':
         specifier: ^5.2.6
         version: 5.2.14(@types/react@19.2.18)(react-native-gesture-handler@2.28.0)(react-native-reanimated@4.1.7)(react-native@0.81.5)(react@19.1.0)
-      '@zed/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
-      '@zed/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@lottiefiles/dotlottie-react':
         specifier: ^0.13.5
         version: 0.13.5(react@19.1.0)
@@ -469,6 +463,12 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.90.5
         version: 5.101.2(react@19.1.0)
+      '@zed/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@zed/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -822,15 +822,6 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.1
         version: 5.4.0(react-hook-form@7.81.0)
-      '@zed/llm-catalog':
-        specifier: workspace:*
-        version: link:../../packages/llm-catalog
-      '@zed/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
-      '@zed/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@lezer/highlight':
         specifier: 1.2.3
         version: 1.2.3
@@ -1050,6 +1041,15 @@ importers:
       '@xterm/xterm':
         specifier: ^5.5.0
         version: 5.5.0
+      '@zed/llm-catalog':
+        specifier: workspace:*
+        version: link:../../packages/llm-catalog
+      '@zed/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@zed/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       ag-grid-community:
         specifier: ^35.1.0
         version: 35.3.1
@@ -1276,9 +1276,6 @@ importers:
       '@embedpdf/pdfium':
         specifier: 2.14.4
         version: 2.14.4
-      '@zed/manifest-schema':
-        specifier: workspace:*
-        version: link:../../packages/manifest-schema
       '@playwright/test':
         specifier: ^1.57.0
         version: 1.61.1
@@ -1306,6 +1303,9 @@ importers:
       '@types/turndown':
         specifier: ^5.0.5
         version: 5.0.6
+      '@zed/manifest-schema':
+        specifier: workspace:*
+        version: link:../../packages/manifest-schema
       eslint:
         specifier: ^9
         version: 9.39.4
@@ -1333,12 +1333,12 @@ importers:
 
   apps/whitelabel-demo:
     dependencies:
-      '@zed/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
       '@tanstack/react-query':
         specifier: ^5.75.2
         version: 5.101.2(react@19.2.8)
+      '@zed/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1553,12 +1553,12 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@zed/llm-catalog':
-        specifier: workspace:*
-        version: link:../llm-catalog
       '@opencode-ai/sdk':
         specifier: 1.17.11
         version: 1.17.11
+      '@zed/llm-catalog':
+        specifier: workspace:*
+        version: link:../llm-catalog
       zustand:
         specifier: ^5.0.3
         version: 5.0.14(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0)
@@ -1599,15 +1599,15 @@ importers:
 
   packages/starter:
     devDependencies:
+      '@types/bun':
+        specifier: ^1.1.0
+        version: 1.3.14
       '@zed/llm-catalog':
         specifier: workspace:*
         version: link:../llm-catalog
       '@zed/manifest-schema':
         specifier: workspace:*
         version: link:../manifest-schema
-      '@types/bun':
-        specifier: ^1.1.0
-        version: 1.3.14
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
@@ -14916,6 +14916,7 @@ packages:
   /@xmldom/xmldom@0.9.10:
     resolution: {integrity: sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw==}
     engines: {node: '>=14.6'}
+    deprecated: this version has critical issues, please update to the latest version
     requiresBuild: true
 
   /@xterm/addon-fit@0.10.0(@xterm/xterm@5.5.0):
