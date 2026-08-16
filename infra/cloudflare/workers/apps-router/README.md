@@ -1,0 +1,33 @@
+# Zed Apps router
+
+This Worker routes one-level App hostnames to the matching Zed API. It signs
+the original host, method, path, and query with that environment's edge secret.
+The API verifies the signature before it reads App state or starts a sandbox.
+
+Required Cloudflare resources:
+
+- A proxied `*.apps.zed.com` DNS record.
+- A Worker route for `*.apps.zed.com/*`.
+- An Advanced Certificate Manager certificate containing `*.apps.zed.com`.
+- The `DEV_EDGE_SECRET`, `STAGING_EDGE_SECRET`, `PROD_EDGE_SECRET`, and
+  `PREVIEW_EDGE_SECRET` Worker secrets.
+
+Run the `Configure Zed Apps Edge` GitHub workflow after the Worker deploys.
+The workflow creates the proxied wildcard DNS record when it is absent. It
+refuses to replace a conflicting record. It also verifies the Worker route,
+secret bindings, public DNS, TLS, and the signed Dev routing path.
+
+Each API environment must receive the corresponding value as
+`ZED_APPS_EDGE_SECRET`. The API falls back to its existing `API_KEY_SECRET`
+when the dedicated value is absent. Do not store secret values in
+`wrangler.toml` or another tracked file.
+
+Deploy:
+
+```sh
+npx --yes wrangler@4.34.0 secret put DEV_EDGE_SECRET
+npx --yes wrangler@4.34.0 secret put STAGING_EDGE_SECRET
+npx --yes wrangler@4.34.0 secret put PROD_EDGE_SECRET
+npx --yes wrangler@4.34.0 secret put PREVIEW_EDGE_SECRET
+npx --yes wrangler@4.34.0 deploy
+```

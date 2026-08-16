@@ -1,0 +1,4 @@
+interface:
+  display_name: "Zed Testing"
+  short_description: "Run and extend the local-first Zed tests"
+  default_prompt: "Use $testing to add or run the correct Zed tests and report exact proof."

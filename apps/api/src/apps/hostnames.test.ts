@@ -1,0 +1,94 @@
+import { afterEach, describe, expect, test } from 'bun:test';
+
+process.env.INTERNAL_ZED_ENV = 'dev';
+process.env.SUPABASE_URL = 'http://supabase.test';
+process.env.FRONTEND_URL = 'https://app.example.com';
+delete process.env.ZED_APPS_BASE_DOMAIN;
+delete process.env.ZED_APPS_LOCAL;
+
+const { config } = await import('../config');
+const { appPublicUrl, appsBaseDomain, resolveAppHost } = await import('./hostnames');
+
+const ROW = { slug: 'store', routeKey: 'aaaaaaaaaaaaaaaa' };
+const originalUrl = config.ZED_URL;
+
+afterEach(() => {
+  (config as { ZED_URL: string }).ZED_URL = originalUrl;
+  delete process.env.ZED_APPS_BASE_DOMAIN;
+  delete process.env.ZED_APPS_LOCAL;
+});
+
+function setApiOrigin(url: string) {
+  (config as { ZED_URL: string }).ZED_URL = url;
+}
+
+describe('App hostnames', () => {
+  test('managed cloud keeps the exact hostnames it publishes today', () => {
+    for (const origin of ['https://api.zed.com', 'https://dev-api.zed.com']) {
+      setApiOrigin(origin);
+      expect(appsBaseDomain()).toBe('apps.zed.com');
+      expect(appPublicUrl(ROW)).toBe('https://dev-store-aaaaaaaaaaaaaaaa.apps.zed.com');
+    }
+  });
+
+  test('a self-host publishes on ITS OWN domain, never on zed.com', () => {
+    // The defect: the fallback was a hard-coded 'apps.zed.com', so a
+    // self-hosted deployment handed its users a hostname on Zed's domain,
+    // pointing at Zed's Cloudflare Worker, for an App running on the
+    // operator's hardware. They could neither serve it nor own it.
+    setApiOrigin('https://api.acme.com');
+    expect(appsBaseDomain()).toBe('apps.acme.com');
+    expect(appPublicUrl(ROW)).toBe('https://dev-store-aaaaaaaaaaaaaaaa.apps.acme.com');
+    expect(appPublicUrl(ROW)).not.toContain('zed.com');
+
+    // ...and it accepts inbound traffic on that same domain, and only there.
+    expect(resolveAppHost('dev-store-aaaaaaaaaaaaaaaa.apps.acme.com')).toEqual({
+      routeKey: 'aaaaaaaaaaaaaaaa', local: false,
+    });
+    expect(resolveAppHost('dev-store-aaaaaaaaaaaaaaaa.apps.zed.com')).toBeNull();
+  });
+
+  test('an explicit base domain always wins, scheme and dots tolerated', () => {
+    setApiOrigin('https://api.acme.com');
+    process.env.ZED_APPS_BASE_DOMAIN = 'https://serve.acme.io/';
+    expect(appsBaseDomain()).toBe('serve.acme.io');
+    expect(appPublicUrl(ROW)).toBe('https://dev-store-aaaaaaaaaaaaaaaa.serve.acme.io');
+    expect(resolveAppHost('dev-store-aaaaaaaaaaaaaaaa.serve.acme.io')).toEqual({
+      routeKey: 'aaaaaaaaaaaaaaaa', local: false,
+    });
+  });
+
+  test('the URL Zed hands out and the host it accepts are the same domain', () => {
+    // These were two independent copies of the fallback. A drift between them
+    // is an App whose published URL the API refuses to route.
+    for (const origin of ['https://api.zed.com', 'https://api.acme.com', 'https://zed.example']) {
+      setApiOrigin(origin);
+      const url = new URL(appPublicUrl(ROW));
+      expect(resolveAppHost(url.hostname)).toEqual({ routeKey: ROW.routeKey, local: false });
+    }
+  });
+
+  test('local development is unchanged', () => {
+    process.env.ZED_APPS_LOCAL = 'true';
+    expect(appPublicUrl(ROW)).toContain('http://aaaaaaaaaaaaaaaa.apps.localhost:');
+    expect(resolveAppHost('aaaaaaaaaaaaaaaa.apps.localhost')).toEqual({
+      routeKey: 'aaaaaaaaaaaaaaaa', local: true,
+    });
+  });
+
+  test('refuses to invent a hostname when no domain can be resolved', () => {
+    setApiOrigin('not-a-url');
+    expect(appsBaseDomain()).toBeNull();
+    expect(() => appPublicUrl(ROW)).toThrow('no base domain');
+    expect(resolveAppHost('dev-store-aaaaaaaaaaaaaaaa.apps.zed.com')).toBeNull();
+  });
+
+  test('routing stays keyed on the environment and the immutable route key', () => {
+    setApiOrigin('https://api.acme.com');
+    // Wrong environment prefix, extra label, and a non-route-key label.
+    expect(resolveAppHost('prod-store-aaaaaaaaaaaaaaaa.apps.acme.com')).toBeNull();
+    expect(resolveAppHost('a.dev-store-aaaaaaaaaaaaaaaa.apps.acme.com')).toBeNull();
+    expect(resolveAppHost('dev-store-nothex.apps.acme.com')).toBeNull();
+    expect(resolveAppHost('anything.example.com')).toBeNull();
+  });
+});

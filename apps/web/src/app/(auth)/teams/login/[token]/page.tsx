@@ -1,0 +1,32 @@
+'use client';
+
+import { useParams } from 'next/navigation';
+
+import { ChatIdentityConnect } from '@/features/auth/chat-identity-connect';
+import { bindTeamsIdentity } from '@zed/sdk';
+
+/**
+ * Teams bind page — the Teams twin of `/slack/login/<token>`. The bot sends a
+ * short-lived signed link; after a normal Zed login this page binds the
+ * Teams user to the signed-in Zed account so the agent runs as them.
+ */
+export default function TeamsLoginPage() {
+  const params = useParams<{ token: string }>();
+  const token = params?.token ?? '';
+
+  return (
+    <ChatIdentityConnect
+      service="Teams"
+      token={token}
+      loginPath={`/teams/login/${token}`}
+      bind={bindTeamsIdentity}
+      missingLinkMessage="This page is opened from a Zed message in Teams. Start the login from Teams to get a fresh link."
+      disconnectNote={
+        <>
+          Disconnect anytime with the <span className="text-foreground font-mono">logout</span>{' '}
+          command in Teams.
+        </>
+      }
+    />
+  );
+}

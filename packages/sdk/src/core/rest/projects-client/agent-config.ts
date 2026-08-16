@@ -1,0 +1,193 @@
+import { backendApi } from '../../http/api-client';
+import { unwrap } from './shared';
+
+// ── Full v2 agent-config editor (the "agent builder", agent-first spec §2.2,
+// redirected 2026-07-05 — "one home per concern") ──
+// Round-trips the agent's TWO homes as one wire shape: `block` (governance —
+// connectors/secrets/skills/zed_cli/workspace/enabled, written to
+// zed.yaml) and `block.opencode` (OpenCode BEHAVIOR — mode/model/
+// temperature/top_p/steps/variant/color/hidden/permission/prompt, written to
+// the agent's own native `.zed/opencode/agents/<name>.md` frontmatter +
+// body). The backend route is what merges the two files into this one
+// response/request shape — see apps/api/src/projects/routes/agent-config.ts.
+// Distinct from setAgentScope (agent-scope.ts), which writes only the
+// secrets/connectors grant subset into a v1 `[[agents]]` entry. Manager-gated
+// server-side (project.customize.write). v2-only: `editable:false` on the GET
+// means a v1 project — the UI degrades to the limited scope editor.
+
+/** A Zed governance grant on the wire: an allowlist, or the sentinels. */
+export type AgentGrantSetV2 = 'all' | 'none' | string[];
+
+/** A single OpenCode permission action. */
+export type PermissionAction = 'ask' | 'allow' | 'deny';
+
+/** A permission rule: a bare action, or a glob-pattern → action map. */
+export type PermissionRule = PermissionAction | Record<string, PermissionAction>;
+
+/** The OpenCode `permission` tree — a bare action, or a per-capability object. */
+export type PermissionConfig = PermissionAction | Record<string, PermissionRule | PermissionAction>;
+
+/** The OpenCode BEHAVIOR half — everything that lives in the agent's own
+ *  `.md` frontmatter (+ `prompt`, the file's BODY text, not a path). */
+export interface OpencodeAgentConfig {
+  description?: string;
+  mode?: 'primary' | 'subagent' | 'all';
+  model?: string;
+  variant?: string;
+  temperature?: number;
+  top_p?: number;
+  /** The agent's system prompt — the `.md`'s BODY text (frontmatter stripped),
+   *  not a file path/reference. */
+  prompt?: string;
+  hidden?: boolean;
+  options?: Record<string, unknown>;
+  color?: string;
+  steps?: number;
+  permission?: PermissionConfig;
+}
+
+/** The full agent block on the wire — mirrors `AgentBlockV2` in
+ *  @zed/manifest-schema PLUS the merged `opencode` behavior half (a wire-
+ *  only convenience; zed.yaml itself never nests `opencode` — see the
+ *  module doc above). */
+export interface AgentConfigBlock {
+  enabled?: boolean;
+  sandbox?: string;
+  connectors?: AgentGrantSetV2;
+  /** Connectors that must resolve before the session starts. */
+  connectors_required?: string[];
+  /** @deprecated Input alias for `connectors_required`. Responses use only
+   *  `connectors_required`. */
+  connectors_personal?: string[];
+  secrets?: AgentGrantSetV2;
+  skills?: AgentGrantSetV2;
+  zed_cli?: AgentGrantSetV2;
+  workspace?: 'runtime' | 'read' | 'branch';
+  opencode?: OpencodeAgentConfig;
+}
+
+export interface AgentConfigResponse {
+  agent: string;
+  /** The manifest's declared schema version — 2 means the full editor applies. */
+  schema_version: number;
+  /** True iff the full block is editable (a zed_version 2 manifest). */
+  editable: boolean;
+  /** The manifest's top-level `default_agent` (v2 only; null for v1). */
+  default_agent: string | null;
+  /** The declared block, or null for a v1 manifest / an agent not declared yet. */
+  block: AgentConfigBlock | null;
+}
+
+export async function getAgentConfig(projectId: string, agentName: string) {
+  const response = unwrap(
+    await backendApi.get<AgentConfigResponse>(
+      `/projects/${projectId}/agents/${encodeURIComponent(agentName)}/config`,
+    ),
+  );
+  return {
+    ...response,
+    block: response.block ? canonicalizeRequiredConnectors(response.block) : null,
+  };
+}
+
+export async function updateAgentConfig(
+  projectId: string,
+  agentName: string,
+  block: AgentConfigBlock,
+) {
+  const canonicalBlock = canonicalizeRequiredConnectors(block);
+  const response = unwrap(
+    await backendApi.put<{
+      ok: boolean;
+      agent: string;
+      schema_version: number;
+      block: AgentConfigBlock | null;
+    }>(`/projects/${projectId}/agents/${encodeURIComponent(agentName)}/config`, canonicalBlock),
+  );
+  return {
+    ...response,
+    block: response.block ? canonicalizeRequiredConnectors(response.block) : null,
+  };
+}
+
+function normalizeConnectorList(values: string[]): string[] {
+  const normalized: string[] = [];
+  for (const value of values) {
+    const slug = value.trim();
+    if (slug && !normalized.includes(slug)) normalized.push(slug);
+  }
+  return normalized;
+}
+
+function equalConnectorSets(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  const rightSet = new Set(right);
+  return left.every((slug) => rightSet.has(slug));
+}
+
+function canonicalizeRequiredConnectors(block: AgentConfigBlock): AgentConfigBlock {
+  const canonical = block.connectors_required
+    ? normalizeConnectorList(block.connectors_required)
+    : undefined;
+  const legacy = block.connectors_personal
+    ? normalizeConnectorList(block.connectors_personal)
+    : undefined;
+  if (canonical && legacy && !equalConnectorSets(canonical, legacy)) {
+    throw new Error('connectors_personal must match connectors_required when both fields are present');
+  }
+  const next = { ...block };
+  delete next.connectors_personal;
+  if (canonical !== undefined || legacy !== undefined) {
+    next.connectors_required = canonical ?? legacy;
+  }
+  return next;
+}
+
+export interface GrantSecretToAgentResponse {
+  identifier: string;
+  agent: string;
+  /** True when the agent's list already admitted the identifier, so no commit ran. */
+  already_granted: boolean;
+  /** True when this edit wrote the manifest's FIRST `agents:` block. From then
+   *  on an agent that is not listed receives no project secrets. */
+  adopted_governance: boolean;
+}
+
+/**
+ * Grant one project secret to one agent: merge the IDENTIFIER into that agent's
+ * `secrets:` list in zed.yaml, upserting the agent entry when the manifest
+ * does not declare it yet.
+ *
+ * Broker and network-boundary delivery reach a session only through such an
+ * explicit list — `secrets: all` withholds both — so this is the one-click fix
+ * for the `no_agent_grant` verdict `ProjectSecret.delivery_blocked_reason`
+ * reports. Distinct from `setAgentScope` (agent-scope.ts), which REPLACES an
+ * already-declared agent's grant set.
+ */
+export async function grantSecretToAgent(
+  projectId: string,
+  identifier: string,
+  agentName: string,
+) {
+  return unwrap(
+    await backendApi.post<GrantSecretToAgentResponse>(
+      `/projects/${projectId}/secrets/${encodeURIComponent(identifier)}/grant`,
+      { agent: agentName },
+    ),
+  );
+}
+
+export interface UpdateProjectDefaultAgentResponse {
+  ok: boolean;
+  default_agent: string;
+}
+
+/** Set the declared project default in `zed.yaml` (v2 projects). */
+export async function updateProjectDefaultAgent(projectId: string, agentName: string) {
+  return unwrap(
+    await backendApi.put<UpdateProjectDefaultAgentResponse>(
+      `/projects/${projectId}/default-agent`,
+      { agent: agentName },
+    ),
+  );
+}

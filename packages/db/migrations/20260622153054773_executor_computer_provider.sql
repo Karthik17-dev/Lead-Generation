@@ -1,0 +1,1 @@
+ALTER TYPE "zed"."executor_connector_provider" ADD VALUE 'computer';

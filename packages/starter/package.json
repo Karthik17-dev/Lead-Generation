@@ -1,0 +1,21 @@
+{
+  "name": "@zed/starter",
+  "version": "1.0.0",
+  "description": "Zed project starter — folder-based template + loader. Used by the API's create-repo path and the zed CLI's `init` command.",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@zed/llm-catalog": "workspace:*",
+    "@zed/manifest-schema": "workspace:*",
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.0.0"
+  }
+}

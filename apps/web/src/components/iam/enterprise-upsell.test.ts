@@ -1,0 +1,121 @@
+// The IAM surfaces (Groups, Roles, Audit, SSO/SCIM) are enterprise-gated:
+// non-entitled accounts must see the upsell card — with the "Request a demo"
+// CTA — instead of the feature, on every one of the four surfaces. The CTA
+// opens the in-app demo-request modal (useRequestDemo) rather than navigating
+// out to the marketing page. Guards the page wiring so a refactor can't
+// silently un-gate a tab.
+import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const dir = import.meta.dir;
+const upsellSource = readFileSync(join(dir, 'enterprise-upsell.tsx'), 'utf8');
+const pageSource = readFileSync(join(dir, '../../app/(app)/accounts/[id]/page.tsx'), 'utf8');
+
+describe('EnterpriseUpsell component', () => {
+  test('CTA opens the in-app demo-request modal', () => {
+    expect(upsellSource).toContain('useRequestDemo');
+    expect(upsellSource).toContain('openDemo(');
+    expect(upsellSource).toContain('Request a demo');
+  });
+
+  test('covers all four gated surfaces', () => {
+    for (const feature of ['groups:', 'roles:', 'audit:', 'identity:']) {
+      expect(upsellSource).toContain(feature);
+    }
+  });
+});
+
+describe('account page gates each IAM surface behind the entitlement', () => {
+  test('groups tab: rbac entitlement or upsell', () => {
+    expect(pageSource).toMatch(/rbacEnabled \? \(\s*<GroupsTab/);
+    expect(pageSource).toContain('<EnterpriseUpsell feature="groups" />');
+  });
+
+  test('roles tab: rbac entitlement or upsell', () => {
+    expect(pageSource).toMatch(/rbacEnabled \? \(\s*<RolesTab/);
+    expect(pageSource).toContain('<EnterpriseUpsell feature="roles" />');
+  });
+
+  test('audit tab: auditAccess entitlement or upsell', () => {
+    expect(pageSource).toContain('const auditEnabled = !!entitlements?.auditAccess');
+    expect(pageSource).toMatch(/auditEnabled \? \(\s*<AuditTab/);
+    expect(pageSource).toContain('<EnterpriseUpsell feature="audit" />');
+  });
+
+  test('identity section: sso/scim entitlement or upsell (cards no longer just hidden)', () => {
+    // A short "why connect both" explainer sits above the two cards — allow
+    // it between the entitlement check and <SsoCard> while still asserting
+    // SsoCard renders before ScimCard.
+    expect(pageSource).toMatch(/enterpriseIdentityEnabled \? \([\s\S]*?<SsoCard[\s\S]*?<ScimCard/);
+    expect(pageSource).toContain('<EnterpriseUpsell feature="identity" />');
+  });
+
+  test('no upsell flash while entitlements load', () => {
+    expect(pageSource).toContain('entitlementsLoading');
+  });
+});
+
+describe('account page rail groups the enterprise surfaces', () => {
+  test('the rail has a labeled Enterprise group with all four IAM sections', () => {
+    const enterpriseGroup = pageSource.match(/label: 'Enterprise',\s*items: \[([\s\S]*?)\]/);
+    const groupBody = enterpriseGroup?.[1] ?? '';
+    expect(groupBody).not.toBe('');
+    for (const id of ["'groups'", "'roles'", "'identity'", "'audit'"]) {
+      expect(groupBody).toContain(`id: ${id}`);
+    }
+  });
+
+  test('identity is its own section, not buried in Settings', () => {
+    expect(pageSource).toMatch(/activeSection === 'identity' && canWriteAccount/);
+    const settingsStart = pageSource.indexOf("activeSection === 'settings' && canWriteAccount");
+    expect(settingsStart).toBeGreaterThan(-1);
+    const settingsEnd = pageSource.indexOf('</m.div>', settingsStart);
+    const settingsBody = pageSource.slice(settingsStart, settingsEnd);
+    // The connection cards (and the tokens-tab cards) still live only on
+    // their own sections — SsoCard/ScimCard never move into Settings.
+    for (const moved of ['SsoCard', 'ScimCard', 'PatPolicyCard']) {
+      expect(settingsBody).not.toContain(moved);
+    }
+  });
+
+  test('the enterprise-demo toggle moved OUT of Identity and INTO Settings (tucked away, not headline)', () => {
+    const identityStart = pageSource.indexOf("activeSection === 'identity' && canWriteAccount");
+    const identityEnd = pageSource.indexOf('</m.div>', identityStart);
+    const settingsStart = pageSource.indexOf("activeSection === 'settings' && canWriteAccount");
+    const identityBody = pageSource.slice(identityStart, Math.min(identityEnd, settingsStart));
+    expect(identityBody).not.toContain('EnterpriseDemoCard');
+
+    const settingsEnd = pageSource.indexOf('</m.div>', settingsStart);
+    const settingsBody = pageSource.slice(settingsStart, settingsEnd);
+    expect(settingsBody).toContain('EnterpriseDemoCard');
+    // Placed above Danger zone, not at the top — tucked away.
+    const demoIdx = settingsBody.indexOf('EnterpriseDemoCard');
+    const dangerIdx = settingsBody.indexOf('Danger zone');
+    expect(demoIdx).toBeGreaterThan(-1);
+    expect(dangerIdx).toBeGreaterThan(-1);
+    expect(demoIdx).toBeLessThan(dangerIdx);
+  });
+
+  test('the demo card + upsell are skipped entirely when a self-host Enterprise license already forces entitlements on', () => {
+    expect(pageSource).toContain('accountStateQuery.data?.enterprise_license_available');
+  });
+
+  /**
+   * `PatPolicyCard` + `ServiceAccountsCard` until 2026-08-12, when both were
+   * replaced by the components the settings panel's API keys tab mounts. The
+   * order flipped with them: the keys come first now, the rules that govern
+   * them second — the same fix made in `tabs/api-keys-tab.tsx`, for the same
+   * reason (a policy form is not what someone opening "Tokens" came for).
+   */
+  test('tokens section carries the keys list and then the key rules', () => {
+    expect(pageSource).toMatch(/activeSection === 'tokens' && canWriteAccount/);
+    expect(pageSource).toMatch(
+      /activeSection === 'tokens'[\s\S]*?<ApiKeysSection[\s\S]*?<KeyRulesCard/,
+    );
+  });
+
+  test('audit webhooks live on the audit tab, gated on entitlement + write', () => {
+    expect(pageSource).toMatch(/auditEnabled && canWriteAccount \? \(\s*<AuditWebhooksCard/);
+  });
+});
