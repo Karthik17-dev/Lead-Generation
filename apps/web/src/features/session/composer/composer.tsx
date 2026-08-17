@@ -62,6 +62,7 @@ import {
 } from './composer-logic';
 import { ComposerToolbar } from './composer-toolbar';
 import { ComposerUnderbar } from './composer-underbar';
+import { TokenProgress } from './token-progress';
 import type { ComposerEditorHandle } from './editor/composer-editor';
 import { useComposerFocus } from './hooks/use-composer-focus';
 import { useMenuRevalidation } from './hooks/use-file-search';
@@ -274,7 +275,8 @@ export interface SessionChatInputProps {
  * it has to be a container query on the chat column, not a media query — the
  * media query cannot see the panel, which is the whole reason it broke before.
  */
-export const COMPOSER_SHELL_CLASS = 'relative z-10 mx-auto w-full max-w-210 shrink-0 px-4 md:pr-1';
+export const COMPOSER_SHELL_CLASS =
+  'relative z-10 mx-auto w-full max-w-210 shrink-0 px-4 pb-4 md:pr-1';
 
 const EMPTY_QUEUE: QueuedMessageView[] = [];
 /** Same, for the in-flight ids. */
@@ -356,7 +358,7 @@ function ComposerImpl({
   onContextClick,
   inputSlot,
   toolbarSlot,
-  underbarPlacement = 'below',
+  underbarPlacement = 'inline',
   slashMenuPlacement = 'above',
   dockClassName,
     cardClassName,
@@ -810,12 +812,8 @@ function ComposerImpl({
       // Which control a row opens lives in `controlToOpenFor`
       // (menus/slash-actions.ts) so it can be tested; this file cannot be.
       const control = controlToOpenFor(action.id);
-      if (control === 'model') {
+      if (control === 'model' || control === 'reasoning') {
         setModelMenuOpen(true);
-        return;
-      }
-      if (control === 'reasoning') {
-        setReasoningMenuOpen(true);
         return;
       }
 
@@ -1205,7 +1203,7 @@ function ComposerImpl({
         onDragLeave={handleDragLeave}
         onDrop={handleDropFiles}
         className={cn(
-          'bg-sidebar border-border relative isolate z-10 w-full rounded-xl border pt-3',
+          'bg-sidebar border-border relative isolate z-10 flex min-h-[142px] w-full flex-col justify-between rounded-xl border',
           'transition-[border-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
           'motion-reduce:transition-none',
           cardClassName,
@@ -1215,7 +1213,7 @@ function ComposerImpl({
       >
         <div
           className={cn(
-            'relative z-[1] flex w-full flex-col overflow-visible',
+            'relative z-[1] flex w-full flex-1 flex-col justify-between overflow-visible',
             'transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
             'motion-reduce:transition-none',
             isDragOver && 'opacity-30',
@@ -1238,7 +1236,7 @@ function ComposerImpl({
           {commandAttachmentPlan.kind === 'refuse' && (
             <div
               role="alert"
-              className="text-muted-foreground flex items-start gap-2 px-4 pt-3 text-xs"
+              className="text-muted-foreground flex items-start gap-2 px-4 pt-3 pb-0 text-xs"
             >
               <WarningIcon className="mt-px size-3.5 shrink-0" />
               <span className="min-w-0 flex-1 text-balance">
@@ -1252,25 +1250,20 @@ function ComposerImpl({
 
           <div
             className={cn(
-              'flex min-w-0 flex-col px-2 pb-2',
+              'flex min-w-0 flex-1 flex-col justify-between px-3.5 pt-2 pb-1.5',
               lockForApproval && 'composer-locked-approval',
-              attachedFiles.length > 0 && 'pt-3',
+              attachedFiles.length > 0 && 'pt-1',
             )}
           >
             {/*
               This padding is part of the input, so it has to behave like it.
-              `px-2 pb-6` lives on THIS element, not on the contenteditable
-              inside it, so the 24px band under the last line and the 8px strip
-              down each side were dead: a press landed on the div, the editor
-              never took focus, and nothing happened. That band is exactly
-              where you click to resume typing, which made the composer read as
-              broken. `cursor-text` matches the affordance to the behaviour.
+              `cursor-text` matches the affordance to the behaviour.
 
               The guard is in `shouldFocusEditorFromPadding` — see it for why
               only a press that TERMINATES here may be forwarded.
             */}
             <div
-              className="relative min-w-0 cursor-text px-2 pb-6"
+              className="relative min-w-0 flex-1 cursor-text"
               onMouseDown={(e) => {
                 if (
                   !shouldFocusEditorFromPadding({
@@ -1335,6 +1328,16 @@ function ComposerImpl({
                     onContextClick={onContextClick}
                   />
                 ) : null
+              }
+              tokenProgress={
+                inlineUnderbar ? (
+                  <TokenProgress
+                    messages={messages}
+                    models={models}
+                    selectedModel={availableSelectedModel}
+                    onContextClick={onContextClick}
+                  />
+                ) : undefined
               }
               modelsLoading={modelsLoading}
               models={models}

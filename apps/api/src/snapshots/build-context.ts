@@ -13,7 +13,7 @@
  */
 
 import { execFile } from 'node:child_process';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync } from 'node:fs';
 import {
   copyFile,
   cp,
@@ -52,7 +52,9 @@ const REPO_ROOT = resolve(__dirname, '../../../..');
 // first-imported suite's fixtures win and break sibling suites in a combined run.
 // In production the env is set once, so reading per-call is behaviour-neutral.
 const agentBinPath = () => process.env.ZED_SNAPSHOT_AGENT_BIN_PATH
-  || resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/dist/zed-agent');
+  || (existsSync(resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/dist/zed-agent'))
+      ? resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/dist/zed-agent')
+      : resolve(REPO_ROOT, 'apps/kortix-sandbox-agent-server/dist/zed-agent'));
 const cliBinPath = () => process.env.ZED_SNAPSHOT_CLI_BIN_PATH
   || resolve(REPO_ROOT, 'apps/cli/dist/zed');
 const cliAttestationPath = () => process.env.ZED_SNAPSHOT_CLI_ATTESTATION_PATH
@@ -566,7 +568,9 @@ export async function stageBuildContext(
   // Env-overridden binary paths skip this — the caller is pinning on purpose.
   if (!process.env.ZED_SNAPSHOT_AGENT_BIN_PATH) {
     const binMtime = (await stat(AGENT_BIN_PATH)).mtimeMs;
-    const srcDir = resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/src');
+    const srcDir = existsSync(resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/src'))
+      ? resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/src')
+      : resolve(REPO_ROOT, 'apps/kortix-sandbox-agent-server/src');
     const newestSrc = await newestMtimeMs(srcDir);
     if (newestSrc > binMtime) {
       throw new Error(

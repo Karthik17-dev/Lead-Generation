@@ -35,5 +35,8 @@ export function computeModelExtrasRows({
   hasVariantHandler,
 }: ModelExtrasRowsInput): ModelExtrasRows {
   const showVariantRow = variants.length > 0 && hasVariantHandler;
-  return { showVariantRow, showSection: showVariantRow };
+  return {
+    showVariantRow,
+    showSection: showVariantRow,
+  };
 }

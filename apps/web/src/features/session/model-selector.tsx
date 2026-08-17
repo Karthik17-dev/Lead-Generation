@@ -11,6 +11,11 @@ import {
   CommandPopoverTrigger,
   CommandSeparator,
 } from '@/components/ui/command';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
 import Loading from '@/components/ui/loading';
 import { MODEL_SELECTOR_PROVIDER_IDS, ProviderLogo } from '@/features/providers/provider-branding';
 import { isLlmGatewayEnabled } from '@/lib/llm-gateway';
@@ -18,10 +23,11 @@ import { cn } from '@/lib/utils';
 import type { ProviderModalTab } from '@/stores/provider-modal-store';
 import { useProviderModalStore } from '@/stores/provider-modal-store';
 import { getProjectDetail } from '@zed/sdk';
-import { contract, qk, type ProviderListResponse } from '@zed/sdk/react';
+import { contract, modelKeyToWire, qk, useGatewayRoutingPolicy, type ProviderListResponse } from '@zed/sdk/react';
 import {
   CheckIcon as Check,
   CaretDownIcon as ChevronDown,
+  CaretRightIcon as CaretRight,
   CreditCardIcon as CreditCard,
   KeyIcon as KeyRound,
   PlusIcon as Plus,
@@ -35,6 +41,12 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { resolveAvailableSelectedModel } from './model-availability';
 import { modelItemValue, pickerGroupId, pickerGroupLabel, splitModelLabel } from './model-grouping';
 import { computeModelExtrasRows } from './model-popover-extras';
+import {
+  EffortIcon,
+  applyReasoningEffort,
+  reasoningEffortValuesFor,
+  useReasoningEffortControl,
+} from './reasoning-effort-selector';
 import { shouldShowFreeTag } from './model-tags';
 import type { FlatModel } from './session-chat-input';
 import { useModelConnectionGate } from './use-model-connection-gate';
@@ -118,6 +130,8 @@ function ModelRow({
   defaultControls,
   onSelect,
   scope,
+  currentEffort,
+  onSetEffort,
 }: {
   model: FlatModel;
   groupProviderID: string;
@@ -129,11 +143,16 @@ function ModelRow({
   /** Which copy of the model this is — see `modelItemValue`. The pinned copy
    *  and the in-group copy must not share a cmdk value. */
   scope: 'pinned' | 'model';
+  currentEffort?: string | null;
+  onSetEffort?: (model: FlatModel, effort: string | null) => void;
 }) {
   const isFree = shouldShowFreeTag(model);
   const { lead, trail } = splitModelLabel(model.modelName);
+  const wireModel = modelKeyToWire(model);
+  const effortValues = useMemo(() => reasoningEffortValuesFor(wireModel), [wireModel]);
+  const hasEfforts = effortValues.length > 0 && !!onSetEffort;
 
-  return (
+  const itemContent = (
     <CommandItem
       value={modelItemValue(scope, model)}
       /*
@@ -155,10 +174,6 @@ function ModelRow({
         'hover:bg-hover data-[selected=true]:bg-hover',
         isSelected && 'bg-active data-[selected=true]:bg-active',
       )}
-      /* The raw id no longer has a line of its own. It is still the only way to
-         tell two same-named models apart, so it stays reachable on hover
-         instead of costing every row a second line. */
-      title={model.modelID}
       onSelect={() => onSelect(model)}
     >
       <ProviderLogo
@@ -177,6 +192,13 @@ function ModelRow({
       </span>
 
       {isFree && <Tag variant="free">Free</Tag>}
+
+      {hasEfforts && (
+        <span className="text-muted-foreground/60 group-hover:text-foreground/80 flex items-center gap-0.5 text-[10px] mr-1 transition-colors">
+          <EffortIcon value={isSelected ? (currentEffort ?? null) : null} className="size-3" />
+          <CaretRight className="size-2.5 opacity-60 group-hover:opacity-100" />
+        </span>
+      )}
 
       {/*
         ONE trailing slot, always the same 24px wide, so swapping what sits in
@@ -282,6 +304,71 @@ function ModelRow({
         )}
       </span>
     </CommandItem>
+  );
+
+  if (!hasEfforts) {
+    return itemContent;
+  }
+
+  return (
+    <HoverCard openDelay={60} closeDelay={150}>
+      <HoverCardTrigger asChild>{itemContent}</HoverCardTrigger>
+      <HoverCardContent
+        side="right"
+        align="start"
+        sideOffset={6}
+        className="w-44 p-1.5 bg-popover/95 backdrop-blur-md rounded-xl border border-border/80 shadow-xl z-50 pointer-events-auto"
+      >
+        <div className="px-2 py-1 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
+          Reasoning effort
+        </div>
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(model);
+              onSetEffort(model, null);
+            }}
+            className={cn(
+              'flex w-full items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors cursor-pointer text-left',
+              'hover:bg-hover hover:text-foreground text-foreground/80',
+              isSelected && !currentEffort && 'bg-active text-foreground font-semibold',
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <EffortIcon value={null} className="size-3.5" />
+              <span>Auto</span>
+            </div>
+            {isSelected && !currentEffort && <Check className="size-3.5 text-foreground shrink-0" />}
+          </button>
+          {effortValues.map((val) => (
+            <button
+              key={val}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(model);
+                onSetEffort(model, val);
+              }}
+              className={cn(
+                'flex w-full items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors cursor-pointer text-left',
+                'hover:bg-hover hover:text-foreground text-foreground/80',
+                isSelected && currentEffort === val && 'bg-active text-foreground font-semibold',
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <EffortIcon value={val} className="size-3.5" />
+                <span>{val.charAt(0).toUpperCase() + val.slice(1)}</span>
+              </div>
+              {isSelected && currentEffort === val && (
+                <Check className="size-3.5 text-foreground shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 
@@ -396,6 +483,29 @@ export function ModelSelector({
       m.modelID === availableSelectedModel?.modelID,
   );
   const displayName = current?.modelName || unsetLabel;
+
+  const effectiveProjectId = extrasProjectId ?? (projectId || undefined);
+  const effortControl = useReasoningEffortControl(availableSelectedModel, effectiveProjectId);
+  const routingPolicy = useGatewayRoutingPolicy(effectiveProjectId);
+
+  const handleSetEffort = useCallback(
+    (model: FlatModel, effort: string | null) => {
+      const wireModel = modelKeyToWire(model);
+      if (effectiveProjectId && routingPolicy.data) {
+        const policy = routingPolicy.data.project;
+        routingPolicy.set.mutate({
+          ...policy,
+          modelGenerationConfig: applyReasoningEffort(
+            policy.modelGenerationConfig,
+            wireModel,
+            effort,
+          ),
+        });
+      }
+      setOpen(false);
+    },
+    [effectiveProjectId, routingPolicy, setOpen],
+  );
 
   const extrasRows = computeModelExtrasRows({
     variants,
@@ -514,9 +624,9 @@ export function ModelSelector({
         onOpenChange={(next) => !disabled && setOpen(next)}
       >
         <CommandPopoverTrigger>
-          <Button type="button" variant="ghost" size="sm" className="text-foreground/70 rounded-lg">
-            <span className={cn('max-w-30 truncate', triggerLabelClassName)}>{displayName}</span>
-            <ChevronDown className={cn('size-3', open && 'rotate-180')} />
+          <Button type="button" variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground h-8 gap-1 rounded-lg px-2 text-xs font-medium">
+            <span className={cn('max-w-30 truncate', triggerLabelClassName)}>{displayName.toLowerCase()}</span>
+            <ChevronDown className={cn('size-3 opacity-60', open && 'rotate-180')} />
           </Button>
         </CommandPopoverTrigger>
 
@@ -604,6 +714,8 @@ export function ModelSelector({
                           defaultControls={defaultControls}
                           onSelect={handleSelect}
                           scope="pinned"
+                          currentEffort={effortControl.current}
+                          onSetEffort={effortControl.canWrite ? handleSetEffort : undefined}
                         />
                       </CommandGroup>
                       <CommandSeparator />
@@ -649,6 +761,8 @@ export function ModelSelector({
                             defaultControls={defaultControls}
                             onSelect={handleSelect}
                             scope="model"
+                            currentEffort={effortControl.current}
+                            onSetEffort={effortControl.canWrite ? handleSetEffort : undefined}
                           />
                         ))}
                       </CommandGroup>
@@ -703,23 +817,10 @@ export function ModelSelector({
 }
 
 // ─── Model popover extras (variant) ─────────────────────────────────────────
-//
-// The variant row renders as a flat chip list rather than nesting a second
-// Radix `Popover` inside this already-open one — that pattern is fragile: the
-// child's portaled content sits outside the parent's content subtree, so the
-// parent's outside-click dismissal can treat a click inside the child as
-// "outside" and close both. A flat row sidesteps that entirely.
-//
-// Reasoning effort used to be the second row here. It is now its own toolbar
-// control (`reasoning-effort-selector.tsx`'s `ReasoningEffortSelector`) — a
-// per-PROJECT setting does not belong folded inside a per-message picker,
-// where it was two clicks deep and invisible at rest. Do not fold it back in.
 
 const extrasChipBase =
   'text-muted-foreground hover:text-foreground hover:bg-muted inline-flex h-7 shrink-0 cursor-pointer items-center rounded-full px-2.5 text-[11px] font-medium capitalize transition-colors duration-200';
-const extrasChipSelected = 'bg-foreground/[0.06] text-foreground';
-const extrasChipLocked =
-  'hover:text-muted-foreground pointer-events-none cursor-not-allowed opacity-60 hover:bg-transparent';
+const extrasChipSelected = 'bg-foreground/[0.06] text-foreground font-semibold';
 const extrasRowLabel =
   'text-muted-foreground/60 px-1 text-[10px] font-semibold tracking-wide uppercase';
 

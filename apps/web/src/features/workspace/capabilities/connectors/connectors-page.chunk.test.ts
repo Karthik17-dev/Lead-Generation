@@ -133,10 +133,10 @@ describe('connectors route initial chunk', () => {
     // If resolution broke, every assertion below would pass vacuously.
     expect(reached.length).toBeGreaterThan(30);
     expect(
-      reached.some((file) => file.endsWith('capabilities/connectors/connectors-page.tsx')),
+      reached.some((file) => file.replace(/\\/g, '/').endsWith('capabilities/connectors/connectors-page.tsx')),
     ).toBe(true);
     // A control: something the page genuinely does import statically.
-    expect(reached.some((file) => file.endsWith('shared/catalog/catalog-grid.tsx'))).toBe(true);
+    expect(reached.some((file) => file.replace(/\\/g, '/').endsWith('shared/catalog/catalog-grid.tsx'))).toBe(true);
   });
 
   // A plain loop, not `test.each`: `@types/bun` does not declare `.each`, and
@@ -144,7 +144,7 @@ describe('connectors route initial chunk', () => {
   // baseline (see CLAUDE.md). Not worth becoming the fourth.
   for (const moduleId of FORBIDDEN) {
     test(`${moduleId} is not in the initial chunk`, () => {
-      const hit = reached.find((file) => relative(SRC, file).startsWith(moduleId));
+      const hit = reached.find((file) => relative(SRC, file).replace(/\\/g, '/').startsWith(moduleId));
       const how = hit ? `\n  reached by: ${chain(parentOf, hit).join('\n           -> ')}` : '';
       expect(`${moduleId}${how}`).toBe(moduleId);
     });

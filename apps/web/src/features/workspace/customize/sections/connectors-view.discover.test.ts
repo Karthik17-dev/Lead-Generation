@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const connectorsSource = readFileSync(join(import.meta.dir, 'connectors-view.tsx'), 'utf8');
+const connectorsSource = readFileSync(join(import.meta.dir, 'connectors-view.tsx'), 'utf8').replace(/\r\n/g, '\n');
 const discoverPath = join(import.meta.dir, 'discover-catalogue.tsx');
 const discoverSource = existsSync(discoverPath) ? readFileSync(discoverPath, 'utf8') : '';
 

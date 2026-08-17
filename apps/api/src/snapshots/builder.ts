@@ -15,6 +15,7 @@
 
 import { and, desc, eq, gt, inArray, lt, or } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OPENCODE_VERSION } from '@zed/shared';
@@ -1300,8 +1301,18 @@ function currentMetaRuntimeFingerprint(): Promise<string> {
     sandboxVersion: `meta-v3:opencode:${OPENCODE_VERSION}`,
     opencodeVersion: OPENCODE_VERSION,
     artifacts: [
-      { label: 'agent', path: resolve(root, 'apps/zed-sandbox-agent-server/src') },
-      { label: 'agent-package', path: resolve(root, 'apps/zed-sandbox-agent-server/package.json') },
+      {
+        label: 'agent',
+        path: existsSync(resolve(root, 'apps/zed-sandbox-agent-server/src'))
+          ? resolve(root, 'apps/zed-sandbox-agent-server/src')
+          : resolve(root, 'apps/kortix-sandbox-agent-server/src'),
+      },
+      {
+        label: 'agent-package',
+        path: existsSync(resolve(root, 'apps/zed-sandbox-agent-server/package.json'))
+          ? resolve(root, 'apps/zed-sandbox-agent-server/package.json')
+          : resolve(root, 'apps/kortix-sandbox-agent-server/package.json'),
+      },
       { label: 'cli', path: resolve(root, 'apps/cli/src') },
       { label: 'cli-package', path: resolve(root, 'apps/cli/package.json') },
       { label: 'entrypoint', path: resolve(root, 'apps/sandbox/entrypoint.sh') },

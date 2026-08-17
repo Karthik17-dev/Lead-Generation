@@ -70,7 +70,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { errorToast, successToast, warningToast } from '@/components/ui/toast';
+import { errorToast, infoToast, successToast, warningToast } from '@/components/ui/toast';
 import { EmptyState } from '@/features/layout/section/empty-state';
 import {
   type EmailInstallation,
@@ -3848,7 +3848,18 @@ function AppCatalogue({
       successToast(`Added ${connector.name} — click Connect to authorize`);
       onAdded(connector.slug);
     },
-    onError: (err: Error) => errorToast(err.message || 'Failed to add'),
+    onError: (err: Error) => {
+      if (/already exists/i.test(err.message)) {
+        const existingSlug = selectedApp
+          ? normalizeConnectorConnectionSlug(selectedApp.name)
+          : undefined;
+        setSelectedApp(null);
+        infoToast(`${selectedApp?.name ?? 'Connector'} is already in this project`);
+        onAdded(existingSlug);
+        return;
+      }
+      errorToast(err.message || 'Failed to add');
+    },
   });
 
   return (

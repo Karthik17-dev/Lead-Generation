@@ -17,11 +17,18 @@ const HOLD_MS = 6000;
  * self-relative, so the roll distance is exactly one line at any font size,
  * and the full `transform` string keeps it hardware-accelerated.
  */
-const ROLL_SWAP = {
+const SUNA_SWAP = {
   initial: { transform: 'translateY(100%)', opacity: 0 },
-  animate: { transform: 'translateY(0%)', opacity: 1 },
-  exit: { transform: 'translateY(-100%)', opacity: 0 },
-  transition: { type: 'spring', duration: 0.4, bounce: 0 },
+  animate: {
+    transform: 'translateY(0%)',
+    opacity: 1,
+    transition: { type: 'spring', duration: 0.45, bounce: 0 },
+  },
+  exit: {
+    transform: 'translateY(-100%)',
+    opacity: 0,
+    transition: { duration: 0.35, ease: [0.2, 0, 0.1, 1] },
+  },
 } as const;
 
 const FADE_SWAP = {
@@ -112,27 +119,23 @@ export function AnimatedComposerPlaceholder({
 
   if (!active) return null;
 
-  const swap = reduceMotion ? FADE_SWAP : ROLL_SWAP;
+  const swap = reduceMotion ? FADE_SWAP : SUNA_SWAP;
 
   return (
     <div
       aria-hidden
-      // `inset-x-2` mirrors the wrapper's `px-2`; the font classes mirror
-      // `ComposerEditor`'s own, so the overlay sits exactly where the static
-      // placeholder would. `overflow-hidden` clips the roll to one line.
-      className="text-muted-foreground pointer-events-none absolute inset-x-2 top-0 overflow-hidden text-[15px] sm:text-[14px]"
+      className="text-muted-foreground pointer-events-none absolute top-2 left-0.5 h-6 w-[calc(100%-0.5rem)] overflow-hidden text-base sm:text-sm"
     >
       <AnimatePresence mode="popLayout" initial={false}>
-        <m.span
+        <m.div
           key={`${index}:${variants[index]}`}
           initial={swap.initial}
           animate={swap.animate}
           exit={swap.exit}
-          transition={swap.transition}
-          className="block min-w-0 truncate will-change-transform"
+          className="absolute inset-0 block min-w-0 truncate"
         >
           {variants[index]}
-        </m.span>
+        </m.div>
       </AnimatePresence>
     </div>
   );

@@ -553,6 +553,14 @@ export function proxyGitUrl(projectId: string): string {
  */
 
 export function sandboxCallbackUnreachableReason(): string | null {
+  if (
+    process.env.ZED_LOCAL_DEV === '1' ||
+    process.env.ALLOW_LOCAL_SANDBOX === '1' ||
+    process.env.ALLOWED_SANDBOX_PROVIDERS?.includes('local') ||
+    config.ALLOWED_SANDBOX_PROVIDERS?.includes('local')
+  ) {
+    return null;
+  }
   let host: string;
   try {
     host = new URL(deriveZedApiBase()).hostname.toLowerCase();
@@ -603,6 +611,14 @@ export async function sandboxCallbackDeadTunnelReason(
   base = deriveZedApiBase(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<string | null> {
+  if (
+    process.env.ZED_LOCAL_DEV === '1' ||
+    process.env.ALLOW_LOCAL_SANDBOX === '1' ||
+    process.env.ALLOWED_SANDBOX_PROVIDERS?.includes('local') ||
+    config.ALLOWED_SANDBOX_PROVIDERS?.includes('local')
+  ) {
+    return null;
+  }
   let host: string;
   try {
     host = new URL(base).hostname.toLowerCase();

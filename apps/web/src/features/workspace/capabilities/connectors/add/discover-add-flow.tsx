@@ -23,7 +23,7 @@ import {
   ModalTitle,
 } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/skeleton';
-import { errorToast, successToast, warningToast } from '@/components/ui/toast';
+import { errorToast, infoToast, successToast, warningToast } from '@/components/ui/toast';
 import { EmptyState } from '@/features/layout/section/empty-state';
 import {
   connectorAuthorizationStrategyIsEditable,
@@ -157,7 +157,16 @@ export function DiscoverAddFlow({
       successToast(`Added ${name}`);
       onAdded(slug);
     },
-    onError: (error: Error) => errorToast(error.message || 'Failed to add'),
+    onError: (error: Error) => {
+      if (/already exists/i.test(error.message)) {
+        const slug = target ? normalizeConnectorConnectionSlug(target.connector.name) : undefined;
+        setTarget(null);
+        infoToast(`${connectionName || 'Connector'} is already added to this project`);
+        onAdded(slug);
+        return;
+      }
+      errorToast(error.message || 'Failed to add');
+    },
   });
 
   const connectionName = target?.name ?? '';

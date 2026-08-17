@@ -53,13 +53,18 @@ import {
   cliConnectorRuntimeArtifacts,
 } from './runtime-fingerprint';
 import { getSandboxProvider, type SandboxProviderAdapter } from './providers';
+import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../../../..');
-const AGENT_SRC_DIR = resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/src');
-const AGENT_PKG_JSON = resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/package.json');
+const AGENT_SRC_DIR = existsSync(resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/src'))
+  ? resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/src')
+  : resolve(REPO_ROOT, 'apps/kortix-sandbox-agent-server/src');
+const AGENT_PKG_JSON = existsSync(resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/package.json'))
+  ? resolve(REPO_ROOT, 'apps/zed-sandbox-agent-server/package.json')
+  : resolve(REPO_ROOT, 'apps/kortix-sandbox-agent-server/package.json');
 const ENTRYPOINT_PATH = process.env.ZED_SNAPSHOT_ENTRYPOINT_PATH
   || resolve(REPO_ROOT, 'apps/sandbox/entrypoint.sh');
 const OPENCODE_WARMUP_PATH = process.env.ZED_SNAPSHOT_OPENCODE_WARMUP_PATH

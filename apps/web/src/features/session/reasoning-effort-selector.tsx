@@ -193,7 +193,7 @@ function label(value: string): string {
  * `const Icon = map[value]` and then `<Icon />` trips the React Compiler's
  * "Cannot create components during render" rule.
  */
-function EffortIcon({ value, className }: { value: string | null; className?: string }) {
+export function EffortIcon({ value, className }: { value: string | null; className?: string }) {
   switch (value) {
     case 'auto':
       return <Zed className={cn(className, 'size-4')} />;

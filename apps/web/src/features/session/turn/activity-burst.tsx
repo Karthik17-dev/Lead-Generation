@@ -57,7 +57,8 @@ const THOUGHT_MAX_H = 'max-h-54';
  * worth reading.
  */
 function ThoughtStepBody({ texts, running }: { texts: ReadonlyArray<string>; running: boolean }) {
-  const text = flattenThought(texts);
+  const rawText = texts.filter(Boolean).join('\n\n').trim();
+  const text = rawText || (texts.length > 0 ? flattenThought(texts) : 'Thinking...');
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinRaf = useRef<number | null>(null);
 
@@ -100,7 +101,7 @@ function ThoughtStepBody({ texts, running }: { texts: ReadonlyArray<string>; run
         rootClassName={cn('h-auto', THOUGHT_MAX_H)}
         className={THOUGHT_MAX_H}
       >
-        <p className="text-foreground/60 text-sm leading-[1.5] text-pretty">{text}</p>
+        <p className="text-foreground/70 text-sm leading-[1.5] text-pretty whitespace-pre-wrap">{text}</p>
       </FadedScrollArea>
     </div>
   );
@@ -178,7 +179,8 @@ function ThoughtChainStepImpl({
           <div
             className={cn(
               'text-foreground/80 hover:text-foreground',
-              'flex w-full cursor-pointer items-center gap-3',
+              'flex w-full cursor-pointer items-center',
+              bare ? 'gap-2' : 'gap-3',
               'text-left text-sm leading-[1.5] transition-colors',
             )}
           >
@@ -197,7 +199,7 @@ function ThoughtChainStepImpl({
           </div>
         </DisclosureTrigger>
         <DisclosureContent>
-          <div className="mt-3 pl-7">
+          <div className={cn('mt-2.5', bare ? 'pl-0' : 'pl-7')}>
             <ThoughtStepBody texts={texts} running={running} />
           </div>
         </DisclosureContent>

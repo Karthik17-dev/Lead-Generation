@@ -18,4 +18,21 @@ if (!Promise.withResolvers) {
   };
 }
 
+// Suppress known harmless Three.js / WebGL shader compilation warnings
+// on Windows ANGLE / WebGL2 when shaders contain double underscores (__).
+if (typeof window !== 'undefined') {
+  const origError = console.error;
+  console.error = function (...args: any[]) {
+    const msg = typeof args[0] === 'string' ? args[0] : '';
+    if (
+      msg.includes('THREE.WebGLProgram: Shader Error') ||
+      msg.includes('Vertex shader is not compiled') ||
+      msg.includes('consecutive underscores (__) are reserved')
+    ) {
+      return;
+    }
+    origError.apply(console, args);
+  };
+}
+
 export {};

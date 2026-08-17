@@ -9,7 +9,7 @@ import Loading from '@/components/ui/loading';
 import type { FlatModel } from '../model-flatten';
 import type { ModelDefaultControls } from '../model-selector';
 import { ModelSelector } from '../model-selector';
-import { ReasoningEffortSelector } from '../reasoning-effort-selector';
+import { VoiceRecorder } from '../voice-recorder';
 import { SendStopControl } from './send-stop-control';
 
 /**
@@ -85,6 +85,9 @@ export interface ComposerToolbarProps {
 
   projectId: string | undefined;
 
+  /** Progress ring / Scope badge when inline in composer toolbar. */
+  tokenProgress?: React.ReactNode;
+
   /** Rendered in the right cluster, ahead of send/stop. The composer passes
    *  this only for the `'inline'` underbar placement — with the `'row'`
    *  placement the slot lives on `ComposerUnderbar` instead, and handing it to
@@ -134,6 +137,7 @@ export function ComposerToolbar({
   selectedVariant,
   onVariantChange,
   projectId,
+  tokenProgress,
   toolbarSlot,
   rewind,
   leading,
@@ -157,7 +161,7 @@ export function ComposerToolbar({
   const showModel = (models.length > 0 || modelRequired) && !!onModelChange;
 
   return (
-    <div className="zed-composer-toolbar flex items-center justify-between gap-1 overflow-visible">
+    <div className="zed-composer-toolbar mt-auto flex items-center justify-between gap-1 overflow-visible pt-0 pb-0">
       <div className="flex min-w-0 items-center gap-1 overflow-visible">
         {leading}
 
@@ -178,13 +182,6 @@ export function ComposerToolbar({
             onOpenChange={onModelMenuOpenChange}
           />
         )}
-
-        <ReasoningEffortSelector
-          model={selectedModel}
-          projectId={projectId}
-          open={reasoningMenuOpen}
-          onOpenChange={onReasoningMenuOpenChange}
-        />
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
@@ -214,7 +211,10 @@ export function ComposerToolbar({
           </HoverCard>
         )}
 
+        {tokenProgress}
         {toolbarSlot}
+
+        <VoiceRecorder onTranscription={onTranscription} disabled={voiceDisabled} />
 
         <SendStopControl
           isSending={isSending}

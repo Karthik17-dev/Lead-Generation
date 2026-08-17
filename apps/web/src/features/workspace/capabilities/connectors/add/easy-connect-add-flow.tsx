@@ -3,10 +3,11 @@
 import { createConnector, type PipedreamApp } from '@zed/sdk';
 import { useMutation } from '@tanstack/react-query';
 
-import { errorToast, successToast, warningToast } from '@/components/ui/toast';
+import { errorToast, infoToast, successToast, warningToast } from '@/components/ui/toast';
 import {
   buildEasyConnectConnectorDraft,
   connectorSyncErrorForSlug,
+  normalizeConnectorConnectionSlug,
   proposeConnectorConnectionSlug,
 } from '@/features/workspace/customize/sections/connector-connection-form';
 import { ConnectorConnectionIcon } from '@/features/workspace/customize/sections/connector-connection-header';
@@ -72,7 +73,16 @@ export function EasyConnectAddFlow({
       onAdded(connection.slug);
       onClose();
     },
-    onError: (err: Error) => errorToast(err.message || 'Failed to add'),
+    onError: (err: Error) => {
+      if (/already exists/i.test(err.message)) {
+        const slug = app ? normalizeConnectorConnectionSlug(app.name) : undefined;
+        infoToast(`${app?.name ?? 'App'} is already added to this project`);
+        onAdded(slug);
+        onClose();
+        return;
+      }
+      errorToast(err.message || 'Failed to add');
+    },
   });
 
   // Read-only members can open a card but must not be offered the create form.

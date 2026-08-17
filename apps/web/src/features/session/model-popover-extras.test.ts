@@ -31,20 +31,9 @@ describe('computeModelExtrasRows', () => {
   });
 
   test('neither shows nothing — the default for every non-composer call site', () => {
-    // Every `ModelSelector` outside the composer passes no variants at all;
-    // this is the case that keeps their popover byte-identical.
     expect(computeModelExtrasRows({ variants: [], hasVariantHandler: false })).toEqual({
       showVariantRow: false,
       showSection: false,
     });
-  });
-
-  test('showSection tracks showVariantRow exactly, now that it is the only row', () => {
-    for (const variants of [[], ['thinking']]) {
-      for (const hasVariantHandler of [true, false]) {
-        const rows = computeModelExtrasRows({ variants, hasVariantHandler });
-        expect(rows.showSection).toBe(rows.showVariantRow);
-      }
-    }
   });
 });

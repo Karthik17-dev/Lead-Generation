@@ -73,6 +73,7 @@ export function ComposerUnderbar({
   toolbarSlot,
 }: ComposerUnderbarProps) {
   const tHardcodedUi = useTranslations('hardcodedUi');
+  const inline = variant === 'inline';
 
   /**
    * The agent picker earns its slot only when the choice is real: there is
@@ -97,16 +98,40 @@ export function ComposerUnderbar({
     Same reason the gutter above (`COMPOSER_SHELL_CLASS`) may be trimmed by a
     breakpoint but never zeroed by one.
   */
-  const inline = variant === 'inline';
+  if (inline) {
+    return (
+      <div className="flex min-w-0 items-center gap-1">
+        <Hint
+          side="top"
+          label={tHardcodedUi.raw('componentsSessionSessionChatInput.line2252JsxTextAttachFiles')}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-base"
+            onClick={onAttachClick}
+            aria-label="Attach files"
+            className="text-muted-foreground rounded-lg"
+          >
+            <Paperclip className="size-4 shrink-0" />
+          </Button>
+        </Hint>
+
+        {showAgent && (
+          <AgentSelector
+            agents={agents}
+            selectedAgent={selectedAgent}
+            onSelect={onAgentChange ?? NO_AGENT_SELECT}
+            disabled={agentSelectorLocked}
+            triggerLabelClassName="max-w-[7rem]"
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={
-        inline
-          ? 'flex min-w-0 items-center gap-1'
-          : 'flex items-center justify-between gap-2 px-px pt-1.5 pb-2'
-      }
-    >
+    <div className="flex items-center justify-between gap-2 px-px pt-1.5 pb-2">
       <div className="flex min-w-0 items-center gap-1">
         <Hint
           side="top"
@@ -136,14 +161,12 @@ export function ComposerUnderbar({
       </div>
 
       <div className="flex items-center gap-1">
-        {inline && !messages ? null : (
-          <TokenProgress
-            messages={messages}
-            models={models}
-            selectedModel={selectedModel}
-            onContextClick={onContextClick}
-          />
-        )}
+        <TokenProgress
+          messages={messages}
+          models={models}
+          selectedModel={selectedModel}
+          onContextClick={onContextClick}
+        />
 
         {toolbarSlot}
       </div>

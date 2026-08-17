@@ -3,14 +3,20 @@
 import {
   BellIcon as Bell,
   RobotIcon as Bot,
+  CalendarDotsIcon as CalendarClock,
   ShippingContainerIcon as Container,
   FileCodeIcon as FileCode,
   PackageIcon as Package,
   SidebarSimpleIcon as PanelLeft,
+  SparkleIcon as SparklesSolid,
+  UsersThreeIcon as UsersGroupSolid,
+  SquaresFourIcon as HiOutlineViewGrid,
+  EnvelopeIcon as Mail,
 } from '@phosphor-icons/react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,20 +30,31 @@ import {
 } from '@/components/ui/dropdown-menu';
 import Hint from '@/components/ui/hint';
 import { useSidebar } from '@/components/ui/sidebar';
+import { Zed } from '@/features/icon/icons/zed';
+import { Slack } from '@/features/icon/icons/slack';
 import { ComposerChatInput, type ComposerOptions } from '@/features/session/composer-chat-input';
 import type { AttachedFile } from '@/features/session/session-chat-input';
 import { SessionWelcome } from '@/features/session/session-welcome';
 import {
+  CAPABILITY_TABS,
+  capabilityTabHref,
+  type CapabilityTab,
+} from '@/features/workspace/capabilities/shared/capability-tab-routes';
+import {
   sidebarOpenerLabel,
   useShowPageSidebarOpener,
 } from '@/features/workspace/project-layout/sidebar-opener';
-import { StarterSuggestions } from '@/features/workspace/project-layout/starter-suggestions';
+import { STARTER_PROMPTS } from '@/lib/starter-prompts';
 import { cn } from '@/lib/utils';
 import { useComposerPrefillStore } from '@/stores/composer-prefill-store';
 import { useSettingsPanelStore } from '@/stores/settings-panel-store';
-import { listProjectAccessRequests, listProjectSandboxes, type SandboxTemplate } from '@zed/sdk';
+import {
+  type SandboxTemplate,
+  listProjectAccessRequests,
+  listProjectSandboxes,
+} from '@zed/sdk';
 import { contract, qk, useProjectName, type Command } from '@zed/sdk/react';
-import { META_SANDBOX_SLUG, isMetaAgentName } from '@zed/shared';
+import { META_SANDBOX_SLUG, chalkColors, isMetaAgentName } from '@zed/shared';
 
 export interface ProjectHomeSendOptions extends ComposerOptions {
   sandbox_slug?: string;
@@ -59,20 +76,12 @@ export function ProjectHome({
   const tI18nHardcoded = useTranslations('hardcodedUi');
   const { state: sidebarState, toggleSidebar, peek, peekEnter, peekLeave } = useSidebar();
   const sidebarToggleLabel = sidebarOpenerLabel({ state: sidebarState, peek });
-  // Shared gate — see sidebar-opener.ts. This used to be a local
-  // `isMobileViewport || state !== 'expanded'`, which is true on the desktop
-  // shell too: the button below is `absolute top-2 left-2`, so on macOS it
-  // rendered directly on top of the traffic lights, alongside the shell's own
-  // opener at x=72. The shell owns that corner; this one stands down there.
   const showSidebarToggle = useShowPageSidebarOpener();
 
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [prefill, setPrefill] = useState<{ text: string; id: number } | null>(null);
 
-  // The sandbox TEMPLATE catalog, not live sandbox health (that is
-  // `useSandboxHealth`, its own key and its own polling). Changed only by this
-  // app's own mutations, which invalidate this key — see `FRESHNESS.sandboxes`.
   const sandboxesQuery = useQuery({
     queryKey: qk.project.sandboxes(projectId),
     queryFn: () => listProjectSandboxes(projectId),
@@ -88,7 +97,7 @@ export function ProjectHome({
     if (metaSelected) setSelectedSlug(null);
   }, [metaSelected]);
 
-  const showSandboxPicker = sandboxItems.length >= 1;
+  const showSandboxPicker = true;
   const openSettings = useSettingsPanelStore((s) => s.openSettings);
   const accessRequests = useQuery({
     queryKey: qk.project.accessRequests(projectId),
@@ -188,55 +197,29 @@ export function ProjectHome({
             onSend={handleSend}
             onCommand={handleCommand}
             projectId={projectId}
-            // `busy` here means "create in flight" — spinner in the send slot,
-            // input locked. NOT isBusy (that renders agent-running stop-button
-            // semantics, which leave the composer with no button at all here).
             isSending={busy}
             disabled={busy}
-            // The home composer navigates to the new session on send — don't clear
-            // it first (that only flashes an empty box before the route swaps, and
-            // would drop the text on a gated send). The message rides across via the
-            // start-stash and reappears as the instant shell's optimistic turn.
             clearOnSend={false}
             autoFocus
-            cardClassName="rounded-xl"
-            parentClassName="px-0 md:px-0"
+            cardClassName="min-h-[120px] rounded-2xl flex flex-col justify-between shadow-xs border-border/70 bg-sidebar/95 backdrop-blur-sm"
+            parentClassName="px-0 md:px-0 w-full max-w-[50rem]"
             dockClassName="right-0 left-0 md:right-0"
-            // A hero composer floating mid-page has no column for a second
-            // rail to align to, so the attach/agent/context controls ride on
-            // the toolbar itself, ahead of the model selector. The session
-            // page keeps the default row beneath the card.
             underbarPlacement="inline"
-            // Hero composer mid-page: the `/` menu opens BELOW the card, into
-            // the empty lower half, instead of shoving the heading up.
             slashMenuPlacement="below"
-            placeholder={tI18nHardcoded.raw(
-              'autoFeaturesCoWorkerProjectLayoutProjectHomeJsxAttrPlaceholder115e6c2d',
-            )}
+            placeholder="Describe a task to start a session..."
             prefill={prefill}
             onAgentSelectionChange={setSelectedAgent}
-            toolbarSlot={metaSelected ? <MetaRuntimeIndicator /> : null}
-            // The template chooser lives inside the overrides panel, not on the
-            // bar — the bar keeps only agent + model.
-            sandboxSlot={
-              !metaSelected && showSandboxPicker
-                ? {
-                    summary: selectedSlug
-                      ? (sandboxItems.find((t) => t.slug === selectedSlug)?.name ?? selectedSlug)
-                      : 'Agent default',
-                    overridden: selectedSlug !== null,
-                    control: (
-                      <SandboxPicker
-                        items={sandboxItems}
-                        activeSlug={activeSlug}
-                        selectedSlug={selectedSlug}
-                        onSelect={setSelectedSlug}
-                      />
-                    ),
-                    onReset: () => setSelectedSlug(null),
-                    resetLabel: 'Reset to agent default',
-                  }
-                : undefined
+            toolbarSlot={
+              metaSelected ? (
+                <MetaRuntimeIndicator />
+              ) : showSandboxPicker ? (
+                <SandboxPicker
+                  items={sandboxItems}
+                  activeSlug={activeSlug}
+                  selectedSlug={selectedSlug}
+                  onSelect={setSelectedSlug}
+                />
+              ) : null
             }
           />
         }
@@ -257,12 +240,9 @@ function MetaRuntimeIndicator() {
 }
 
 /**
- * The project-home empty-state body, laid out like Perplexity's home: the
- * centered welcome heading with the composer directly beneath it and the
- * starter-prompt chips right under the input — all vertically centered — while
- * the quiet "set up your project" pills sit at the bottom of the viewport.
- * Shared by the project index page AND the instant session shell's empty state
- * so a brand-new session opens onto the identical surface.
+ * The project-home empty-state body, laid out with the centered welcome heading,
+ * the composer directly beneath it, and the starter-prompt chips right under the input,
+ * with the setup pills at the bottom of the viewport.
  */
 export function ProjectHomeWelcomeBody({
   projectId,
@@ -270,34 +250,67 @@ export function ProjectHomeWelcomeBody({
   onPickSuggestion,
 }: {
   projectId: string;
-  /** The composer input rendered in the hero position, directly under the heading. */
   composer?: ReactNode;
-  /** When provided, starter-prompt chips render directly below the composer. */
   onPickSuggestion?: (text: string) => void;
 }) {
-  const tI18nHardcoded = useTranslations('hardcodedUi');
-  // One source for the project name — see `useProjectName`'s doc comment.
   const name = useProjectName(projectId) ?? '';
   const displayName = name.trim() || 'this project';
 
   return (
     <div className="relative z-10 flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="m-auto flex w-full max-w-2xl flex-col items-center gap-8 px-2 py-8 sm:px-4">
-          <h1 className="text-muted-foreground w-full text-left text-2xl leading-[1.2] tracking-tight text-balance">
-            What would you like to do?
+        <div className="m-auto flex w-full max-w-[52rem] flex-col items-center gap-8 px-2 py-8 sm:px-4">
+          <h1 className="text-muted-foreground max-w-2xl text-center text-4xl leading-[1.2] tracking-tight text-balance max-sm:text-3xl">
+            Give <span className="text-foreground">{displayName}</span>{' '}
+            something real to work on.
           </h1>
 
           {composer || onPickSuggestion ? (
-            <div className="flex w-full flex-col items-center space-y-4">
+            <div className="flex w-full flex-col items-center gap-4">
               {composer}
-              {onPickSuggestion ? (
-                <StarterSuggestions projectId={projectId} onPick={onPickSuggestion} />
-              ) : null}
+              {onPickSuggestion ? <StarterPromptChips onPick={onPickSuggestion} /> : null}
             </div>
           ) : null}
         </div>
       </div>
+
+      <div className="flex shrink-0 justify-center px-4 pb-6">
+        <ProjectHomeSections projectId={projectId} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Starter prompt suggestions rendered as a centered, wrapping row of quiet
+ * pills directly beneath the composer.
+ */
+export function StarterPromptChips({ onPick }: { onPick: (text: string) => void }) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-2">
+      {STARTER_PROMPTS.map((p, i) => {
+        const ChipIcon = p.icon;
+        const chalk = chalkColors(p.label);
+        return (
+          <Button
+            key={p.id}
+            onClick={() => onPick(p.prompt)}
+            variant="outline"
+            size="sm"
+            className={cn(
+              'bg-background/60 shrink-0 gap-1.5 rounded-md backdrop-blur-sm',
+              i >= 4 && 'max-sm:hidden',
+            )}
+          >
+            <ChipIcon
+              className="size-3.5 shrink-0"
+              style={{ color: chalk.foreground }}
+              aria-hidden
+            />
+            {p.label}
+          </Button>
+        );
+      })}
     </div>
   );
 }
@@ -314,8 +327,14 @@ function SandboxPicker({
   onSelect: (slug: string | null) => void;
 }) {
   const tI18nHardcoded = useTranslations('hardcodedUi');
-  const active = items.find((t) => t.slug === activeSlug) ?? items[0] ?? null;
-  if (!active) return null;
+  const fallbackDefault: SandboxTemplate = {
+    template_id: 'default',
+    slug: 'default',
+    name: 'Agent environment',
+    is_default: true,
+    daytona_state: 'active',
+  };
+  const active = items.find((t) => t.slug === activeSlug) ?? items[0] ?? fallbackDefault;
   const ActiveIcon = active.is_default ? Container : active.has_image ? Package : FileCode;
   const activeStateTone =
     active.daytona_state === 'active'
@@ -411,5 +430,92 @@ function SandboxPicker({
         })}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+type SetupTile = {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  desc: string;
+  section: string | CapabilityTab['key'];
+};
+
+const isCapabilityTabKey = (section: SetupTile['section']): section is CapabilityTab['key'] =>
+  CAPABILITY_TABS.some((tab) => tab.key === section);
+
+const PROJECT_SETUP_TILES: SetupTile[] = [
+  {
+    icon: HiOutlineViewGrid,
+    title: 'Connectors',
+    desc: 'Connect tools your agent can act in.',
+    section: 'connectors',
+  },
+  {
+    icon: Mail,
+    title: 'Email',
+    desc: 'Run this project via email.',
+    section: 'channels',
+  },
+  {
+    icon: CalendarClock,
+    title: 'Scheduled tasks',
+    desc: 'Run work on a schedule or from an event.',
+    section: 'schedules',
+  },
+  {
+    icon: SparklesSolid,
+    title: 'Skills',
+    desc: 'Repeatable workflows your agent reuses.',
+    section: 'skills',
+  },
+  {
+    icon: Slack,
+    title: 'Slack',
+    desc: 'Run this project right from chat.',
+    section: 'channels',
+  },
+  {
+    icon: UsersGroupSolid,
+    title: 'Your team',
+    desc: 'Invite people to run and review work.',
+    section: 'members',
+  },
+  {
+    icon: Zed,
+    title: 'Agent',
+    desc: 'Shape how your agent thinks and acts.',
+    section: 'agent',
+  },
+];
+
+function ProjectHomeSections({ projectId }: { projectId: string }) {
+  const openSettings = useSettingsPanelStore((s) => s.openSettings);
+  const router = useRouter();
+  const tiles = PROJECT_SETUP_TILES;
+
+  return (
+    <div className="flex w-full max-w-3xl flex-wrap items-center justify-center gap-2">
+      {tiles.map((tile) => {
+        const { icon: TileIcon, title, desc, section } = tile;
+
+        return (
+          <Hint key={title} label={desc} side="top">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                isCapabilityTabKey(section)
+                  ? router.push(capabilityTabHref(projectId, section))
+                  : openSettings(section as any)
+              }
+              className="bg-background/60 gap-1.5 rounded-md backdrop-blur-sm"
+            >
+              <TileIcon className="text-muted-foreground size-4 shrink-0" />
+              {title}
+            </Button>
+          </Hint>
+        );
+      })}
+    </div>
   );
 }

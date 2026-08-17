@@ -403,7 +403,9 @@ export function buildLocalAccountState(): AccountStateResponse {
       display_name: 'Free',
       monthly_credits: 0,
       can_purchase_credits: false,
-      entitlements: getTierEntitlements('free'),
+      entitlements: config.ENTERPRISE_LICENSE_AVAILABLE
+        ? getTierEntitlements('enterprise')
+        : getTierEntitlements('free'),
     },
     enterprise_license_available: config.ENTERPRISE_LICENSE_AVAILABLE,
     // No-DB local mode has no credit_accounts row, so the contracted-Enterprise

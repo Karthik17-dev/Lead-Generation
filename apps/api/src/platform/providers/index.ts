@@ -1,6 +1,7 @@
 import { config } from '../../config';
 import { DaytonaProvider } from './daytona';
 import { E2BProvider } from './e2b';
+import { LocalProvider } from './local';
 import { PlatinumProvider } from './platinum';
 import type { NetworkBoundarySecretBinding } from '../../secrets/network-boundary';
 
@@ -10,13 +11,15 @@ import type { NetworkBoundarySecretBinding } from '../../secrets/network-boundar
  * `ProviderName` union. Call sites depend on the `SandboxProvider`
  * interface, not the concrete class, so they stay untouched.
  *
+ *   - local — local development runtime
  *   - daytona — Daytona Cloud
  *   - platinum — Zed Platinum
  *   - e2b — E2B Cloud
  */
-export type ProviderName = 'daytona' | 'platinum' | 'e2b';
+export type ProviderName = 'local' | 'daytona' | 'platinum' | 'e2b';
 
 const NETWORK_BOUNDARY_SYNC_MODE: Record<ProviderName, 'on-demand' | 'authoritative'> = {
+  local: 'on-demand',
   daytona: 'on-demand',
   platinum: 'authoritative',
   e2b: 'on-demand',
@@ -351,6 +354,9 @@ export function getProvider(name: ProviderName): SandboxProvider {
   let provider: SandboxProvider;
 
   switch (name) {
+    case 'local':
+      provider = new LocalProvider();
+      break;
     case 'daytona':
       if (!config.DAYTONA_API_KEY) {
         throw new Error('Daytona provider requires DAYTONA_API_KEY to be set.');

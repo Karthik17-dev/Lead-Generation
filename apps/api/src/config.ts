@@ -677,6 +677,7 @@ type EnvIssue = { var: string; message: string; level: 'error' | 'warn' };
 // ALLOWED_SANDBOX_PROVIDERS — adding a new provider is a one-place change
 // here plus a case in `getProvider()` in platform/providers/index.ts.
 export const KNOWN_PROVIDERS: readonly SandboxProviderName[] = [
+  'local',
   'daytona',
   'platinum',
   'e2b',
@@ -1208,6 +1209,8 @@ export const config = {
   isProviderEnabled(name: SandboxProviderName): boolean {
     if (!this.ALLOWED_SANDBOX_PROVIDERS.includes(name)) return false;
     switch (name) {
+      case 'local':
+        return true;
       case 'daytona':
         return !!this.DAYTONA_API_KEY;
       case 'platinum':
@@ -1219,6 +1222,10 @@ export const config = {
         return exhaustive;
       }
     }
+  },
+
+  isLocalEnabled(): boolean {
+    return this.ALLOWED_SANDBOX_PROVIDERS.includes('local');
   },
 
   /**

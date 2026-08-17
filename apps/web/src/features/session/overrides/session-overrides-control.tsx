@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ResetAxisButton } from '@/features/session/scope/session-scope-control';
 import { cn } from '@/lib/utils';
 import type { Icon } from '@phosphor-icons/react';
-import { GearSixIcon } from '@phosphor-icons/react';
+import { GearSixIcon, SlidersHorizontalIcon } from '@phosphor-icons/react';
 import { type ReactNode, useState } from 'react';
 
 /**
@@ -194,12 +194,13 @@ export function SessionOverridesControl({ onSave, ...contentProps }: SessionOver
         <Button
           type="button"
           variant="ghost"
-          size="icon"
+          size="sm"
           disabled={contentProps.disabled || contentProps.saving}
           aria-label="Session overrides"
-          className="text-muted-foreground hover:text-foreground data-[state=open]:text-foreground"
+          className="text-muted-foreground hover:text-foreground data-[state=open]:text-foreground h-8 gap-1.5 px-2 text-xs font-medium"
         >
-          <GearSixIcon className="size-4 shrink-0" />
+          <SlidersHorizontalIcon className="size-3.5 shrink-0" />
+          Scope
         </Button>
       </PopoverTrigger>
       <PopoverContent

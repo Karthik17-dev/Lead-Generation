@@ -531,10 +531,31 @@ export function pricingRefLookupCandidates(pricingRef: string): string[] {
 // benchmark while costing ~10x less per unit of work).
 export const MANAGED_MODELS: ManagedModel[] = [
   {
-    // Grok 4.6 through OpenRouter's first-party xAI endpoint. The explicit
-    // xAI preference keeps routing on the model owner while fallbacks preserve
-    // availability. The pricingRef supplies its context tier: $2/$6 per
-    // million input/output tokens, doubled above a 200k-token prompt.
+    id: 'zed',
+    name: 'Zed',
+    upstreamModelId: 'auto',
+    transport: 'openrouter',
+    pricingRef: 'openrouter/x-ai/grok-4.6',
+    pricing: {
+      inputPerMillion: 2,
+      cachedInputPerMillion: 0.5,
+      outputPerMillion: 6,
+      contextOver200k: {
+        inputPerMillion: 4,
+        cachedInputPerMillion: 1,
+        outputPerMillion: 12,
+        contextThreshold: 200_000,
+      },
+    },
+    tier: 'flagship',
+    vision: true,
+    limit: { context: 500_000, output: 500_000 },
+    openrouterProvider: {
+      order: ['xai'],
+      allow_fallbacks: true,
+    },
+  },
+  {
     id: 'grok-4.6',
     name: 'Grok 4.6',
     upstreamModelId: 'x-ai/grok-4.6',
@@ -551,7 +572,7 @@ export const MANAGED_MODELS: ManagedModel[] = [
         contextThreshold: 200_000,
       },
     },
-    tier: 'flagship',
+    tier: 'balanced',
     vision: true,
     limit: { context: 500_000, output: 500_000 },
     openrouterProvider: {

@@ -21,7 +21,7 @@ export const SANDBOX_PORTS = {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type SandboxProviderName = 'daytona' | 'platinum' | 'e2b';
+export type SandboxProviderName = 'local' | 'daytona' | 'platinum' | 'e2b';
 export type ServerTypeOption = string;
 
 export interface SandboxCreateProgress {
