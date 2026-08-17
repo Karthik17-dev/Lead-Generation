@@ -10,10 +10,8 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/karthikxa/AI-Management-System?style=flat&color=111111&label=Stars)](https://github.com/karthikxa/AI-Management-System/stargazers)
 [![Release](https://img.shields.io/github/v/release/karthikxa/AI-Management-System?style=flat&color=111111&label=Release)](https://github.com/karthikxa/AI-Management-System/releases/latest)
-[![Docs](https://img.shields.io/badge/Docs-zed.com%2Fdocs-111111.svg)](https://zed.com/docs)
+[![Docs](https://img.shields.io/badge/Docs-zodzy.in%2Fdocs-111111.svg)](https://zodzy.in/docs)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-111111.svg)](#contributing)
-
-[Website](https://zed.com) · [Documentation](https://zed.com/docs) · [Cloud](https://zed.com) · [Manifesto](MANIFESTO.md)
 
 <br />
 
@@ -57,7 +55,7 @@ Three commands. Build your company like a codebase, then bring it live.
 
 ```bash
 # 1 · Install the CLI
-curl -fsSL https://zed.com/install | bash
+curl -fsSL https://zodzy.in/install | bash
 
 # 2 · Scaffold a project — creates zed.yaml + your agents, skills and runtime config
 zed init
@@ -74,8 +72,8 @@ zed cr ls          # review what an agent proposes — merge to keep it
 zed chat           # talk to a session's agent from your terminal
 ```
 
-Prefer zero setup? Sign up at **[zed.com](https://zed.com)**, create a project, and start a
-session — nothing to install. Full command surface: **[CLI reference](https://zed.com/docs/cli)**.
+Prefer zero setup? Sign up at **[zodzy.in](https://zodzy.in)**, create a project, and start a
+session — nothing to install. Full command surface: **[CLI reference](https://zodzy.in/docs/cli)**.
 
 ---
 
@@ -147,7 +145,7 @@ GitHub access, and Pipedream connectors — ports, local URLs, keys and Docker C
 generated for you. Note that `self-host start` pulls its images from Docker Hub, so this is a
 self-hosted install rather than a disconnected one.
 
-Managed hosting is **[Zed Cloud](https://zed.com)**.
+Managed hosting is **[Zodzy Cloud](https://zodzy.in)**.
 
 ---
 
@@ -190,5 +188,5 @@ pull requests are welcome.
 <br />
 <strong>We're building the thing that takes a company from human to AGI — and lets it keep every byte of itself on the way there.</strong>
 <br /><br />
-<a href="https://zed.com">zed.com</a>
+<a href="https://zodzy.in">zodzy.in</a>
 </div>
