@@ -32,6 +32,7 @@ export const sandboxProviderEnum = zedSchema.enum('sandbox_provider', [
   'daytona',
   'platinum',
   'e2b',
+  'local',
 ]);
 
 export const projectStatusEnum = zedSchema.enum('project_status', ['active', 'archived']);

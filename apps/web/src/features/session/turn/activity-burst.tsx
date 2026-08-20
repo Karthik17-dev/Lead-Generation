@@ -137,17 +137,11 @@ function ThoughtChainStepImpl({
   texts,
   running,
   bare,
-  autoOpen = true,
+  autoOpen = false,
 }: {
   texts: ReadonlyArray<string>;
   running: boolean;
   bare?: boolean;
-  /**
-   * Whether live reasoning may unfurl its paragraph on its own. `false` under
-   * minimal density: the row still shimmers `Thinking`, but the streaming
-   * text stays behind the caret until the reader asks for it. Their click
-   * still wins permanently, exactly as under normal density.
-   */
   autoOpen?: boolean;
 }) {
   const [open, setOpen] = useState(autoOpen && running);

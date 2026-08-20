@@ -571,9 +571,20 @@ export async function middleware(request: NextRequest) {
   try {
     // Redirect to auth if not authenticated (using the user we already fetched)
     if (authError || !user) {
+      const redirectTarget = `${pathname}${request.nextUrl.search || ''}`;
+
+      // DEV ONLY: bypass the auth page entirely and auto-sign-in with the
+      // seeded mock user. Set NEXT_PUBLIC_DEV_MOCK_AUTH=true in .env.local.
+      if (process.env.NEXT_PUBLIC_DEV_MOCK_AUTH === 'true') {
+        const mockLoginUrl = request.nextUrl.clone();
+        mockLoginUrl.pathname = '/api/dev/mock-login';
+        mockLoginUrl.search = '';
+        mockLoginUrl.searchParams.set('redirect', redirectTarget);
+        return finalizeEnvironmentAccess(NextResponse.redirect(mockLoginUrl));
+      }
+
       const url = request.nextUrl.clone();
       url.pathname = '/auth';
-      const redirectTarget = `${pathname}${request.nextUrl.search || ''}`;
       url.searchParams.set('redirect', redirectTarget);
       // Must preserve the self-heal cookie-clear above — without it, the
       // browser bounces to /auth still carrying the poisoned cookie, and the

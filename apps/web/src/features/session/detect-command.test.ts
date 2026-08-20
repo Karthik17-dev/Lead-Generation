@@ -70,4 +70,11 @@ describe('detectCommandFromText', () => {
       args: undefined,
     });
   });
+
+  test('handles non-array commands parameter gracefully without throwing', () => {
+    expect(detectCommandFromText('build the project now please', { ok: true } as any)).toBeUndefined();
+    expect(detectCommandFromText('build the project now please', 'not-an-array' as any)).toBeUndefined();
+    expect(detectCommandFromText('build the project now please', null as any)).toBeUndefined();
+    expect(detectCommandFromText('build the project now please', undefined)).toBeUndefined();
+  });
 });

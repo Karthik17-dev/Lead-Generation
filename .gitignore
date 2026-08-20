@@ -156,3 +156,10 @@ botkube-comm-real.yaml
 
 # Playwright MCP session artifacts (console logs, page snapshots)
 .playwright-mcp/
+.freebuff/
+cookies.txt
+scratch*
+scratch/
+packages/db/scratch*
+packages/db/scratch/
+

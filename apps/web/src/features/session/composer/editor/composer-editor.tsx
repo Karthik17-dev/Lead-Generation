@@ -518,7 +518,7 @@ export const ComposerEditor = forwardRef<ComposerEditorHandle, ComposerEditorPro
            * change the `sm:` step if the tablet cap turns out to be wrong.
            */
           class:
-            'outline-none min-h-[44px] max-h-[200px] overflow-y-auto px-0.5 pt-2 pb-2 text-base sm:text-sm',
+            'outline-none min-h-[24px] max-h-[180px] overflow-y-auto px-0.5 pt-1.5 pb-1.5 text-base sm:text-sm',
         },
         handleKeyDown,
       },

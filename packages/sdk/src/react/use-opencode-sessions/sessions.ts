@@ -28,7 +28,7 @@ export function useOpenCodeSessions(enabled = true) {
       const client = getClient();
       const result = await client.session.list({ limit: 10000 });
       const sessions = unwrap(result);
-      const sorted = sessions.sort((a: Session, b: Session) => b.time.updated - a.time.updated);
+      const sorted = sessions.sort((a: Session, b: Session) => (b.time?.updated ?? b.time?.created ?? 0) - (a.time?.updated ?? a.time?.created ?? 0));
       setLSCache(LS_SESSIONS, sorted);
       return sorted;
     },
@@ -119,9 +119,9 @@ export function useCreateOpenCodeSession() {
         if (idx >= 0) {
           const next = [...old];
           next[idx] = session;
-          return next.sort((a, b) => b.time.updated - a.time.updated);
+          return next.sort((a, b) => (b.time?.updated ?? b.time?.created ?? 0) - (a.time?.updated ?? a.time?.created ?? 0));
         }
-        return [session, ...old].sort((a, b) => b.time.updated - a.time.updated);
+        return [session, ...old].sort((a, b) => (b.time?.updated ?? b.time?.created ?? 0) - (a.time?.updated ?? a.time?.created ?? 0));
       });
       queryClient.setQueryData(opencodeKeys.runtimeSession(session.id), session);
     },
@@ -186,7 +186,7 @@ export function useUpdateOpenCodeSession() {
         if (idx < 0) return old;
         const next = [...old];
         next[idx] = session;
-        return next.sort((a, b) => b.time.updated - a.time.updated);
+        return next.sort((a, b) => (b.time?.updated ?? b.time?.created ?? 0) - (a.time?.updated ?? a.time?.created ?? 0));
       });
       queryClient.setQueryData(opencodeKeys.runtimeSession(session.id), session);
     },

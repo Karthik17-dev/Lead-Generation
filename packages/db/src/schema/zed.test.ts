@@ -87,7 +87,7 @@ describe('zed enums', () => {
 
   test('sandbox_provider enum lists supported providers', () => {
     expect(sandboxProviderEnum.enumName).toBe('sandbox_provider');
-    expect(sandboxProviderEnum.enumValues).toEqual(['daytona', 'platinum', 'e2b']);
+    expect(sandboxProviderEnum.enumValues).toEqual(['daytona', 'platinum', 'e2b', 'local']);
   });
 
   test('project_status enum is active or archived', () => {

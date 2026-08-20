@@ -514,7 +514,11 @@ export async function runProjectMaintenance(): Promise<void> {
 }
 
 export function startProjectMaintenance(): void {
-  if (process.env.ZED_PROJECT_MAINTENANCE_ENABLED === 'false') return;
+  if (
+    process.env.ZED_PROJECT_MAINTENANCE_ENABLED === 'false' ||
+    process.env.ZED_LOCAL_DEV === '1'
+  )
+    return;
   if (globalForProjectMaintenance.__zedProjectMaintenanceTimer) {
     clearInterval(globalForProjectMaintenance.__zedProjectMaintenanceTimer);
   }

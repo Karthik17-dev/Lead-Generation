@@ -29,7 +29,8 @@ export interface ProviderCoverageDependencies {
   observationTimeoutMs?: number;
 }
 
-export const PROVIDER_COVERAGE_OBSERVATION_TIMEOUT_MS = 5_000;
+export const PROVIDER_COVERAGE_OBSERVATION_TIMEOUT_MS =
+  process.env.ZED_LOCAL_DEV === '1' ? 500 : 5_000;
 
 async function withObservationTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;

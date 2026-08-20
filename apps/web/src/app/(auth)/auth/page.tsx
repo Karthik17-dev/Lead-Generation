@@ -246,6 +246,38 @@ function AuthCardForm({
     router.refresh();
   };
 
+  const handleDevSkipAuth = async () => {
+    setPendingAction('continue');
+    try {
+      const supabase = createBrowserSupabaseClient();
+      let { data, error } = await supabase.auth.signInWithPassword({
+        email: 'dev@zed.local',
+        password: 'password123',
+      });
+      if (error) {
+        const up = await supabase.auth.signUp({
+          email: 'dev@zed.local',
+          password: 'password123',
+        });
+        data = up.data as any;
+      }
+      if (data?.session?.access_token) {
+        setBootstrapAuthToken(data.session.access_token);
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token || '',
+        });
+      }
+      markPostAuthIntent();
+      router.push(returnUrl || '/projects');
+      router.refresh();
+    } catch (err: any) {
+      failWith(err?.message || 'Auto-login failed');
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   const buildBaseFormData = (target: string) => {
     const formData = new FormData();
     formData.set('email', target);
@@ -864,6 +896,19 @@ function AuthCardForm({
             Continue
           </Button>
         </form>
+
+        <div className="mt-4 pt-4 border-t border-border/40 space-y-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            disabled={pending}
+            className="w-full font-semibold border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all text-foreground"
+            onClick={() => void handleDevSkipAuth()}
+          >
+            {pendingAction === 'dev-skip' ? <Loading className="size-4 shrink-0" /> : '⚡ Skip Auth (Continue with Mock / Dev User)'}
+          </Button>
+        </div>
 
         {/* Explicit SSO entry — the discoverable counterpart of the silent
             home-realm discovery Continue already performs. Same dialect as the

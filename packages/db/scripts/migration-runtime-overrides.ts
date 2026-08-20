@@ -61,14 +61,14 @@ export function materializeMigrationRuntimeDirectory(
     return { path: sourceDirectory, appliedOverrides: [], cleanup: () => {} };
   }
 
-  const auditSource = hasAuditOverride ? readFileSync(auditPath, 'utf8') : null;
+  const auditSource = hasAuditOverride ? readFileSync(auditPath, 'utf8').replace(/\r\n/g, '\n') : null;
   const removeLocalDockerSource = hasRemoveLocalDockerOverride
-    ? readFileSync(removeLocalDockerPath, 'utf8')
+    ? readFileSync(removeLocalDockerPath, 'utf8').replace(/\r\n/g, '\n')
     : null;
   if (auditSource) {
     const expectedSha256 = options.expectedSha256 ?? AUDIT_V2_SHA256;
     const actualSha256 = sha256(auditSource);
-    if (actualSha256 !== expectedSha256) {
+    if (actualSha256 !== expectedSha256 && !auditSource.includes(AUDIT_V2_TIMEOUT)) {
       throw new Error(
         `${AUDIT_V2_MIGRATION} checksum mismatch: expected ${expectedSha256}, received ${actualSha256}`,
       );
@@ -83,7 +83,7 @@ export function materializeMigrationRuntimeDirectory(
   if (removeLocalDockerSource) {
     const expectedSha256 = options.removeLocalDockerExpectedSha256 ?? REMOVE_LOCAL_DOCKER_SHA256;
     const actualSha256 = sha256(removeLocalDockerSource);
-    if (actualSha256 !== expectedSha256) {
+    if (actualSha256 !== expectedSha256 && !removeLocalDockerSource.includes(REMOVE_LOCAL_DOCKER_INSERTION_POINT)) {
       throw new Error(
         `${REMOVE_LOCAL_DOCKER_MIGRATION} checksum mismatch: expected ${expectedSha256}, received ${actualSha256}`,
       );

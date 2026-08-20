@@ -1203,7 +1203,7 @@ function ComposerImpl({
         onDragLeave={handleDragLeave}
         onDrop={handleDropFiles}
         className={cn(
-          'bg-sidebar border-border relative isolate z-10 flex min-h-[142px] w-full flex-col justify-between rounded-xl border',
+          'bg-sidebar border-border relative isolate z-10 flex min-h-[108px] w-full flex-col justify-between rounded-xl border',
           'transition-[border-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
           'motion-reduce:transition-none',
           cardClassName,

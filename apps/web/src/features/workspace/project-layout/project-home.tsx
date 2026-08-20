@@ -201,7 +201,7 @@ export function ProjectHome({
             disabled={busy}
             clearOnSend={false}
             autoFocus
-            cardClassName="min-h-[120px] rounded-2xl flex flex-col justify-between shadow-xs border-border/70 bg-sidebar/95 backdrop-blur-sm"
+            cardClassName="min-h-[138px] rounded-2xl flex flex-col justify-between shadow-xs border-border/70 bg-sidebar/95 backdrop-blur-sm"
             parentClassName="px-0 md:px-0 w-full max-w-[50rem]"
             dockClassName="right-0 left-0 md:right-0"
             underbarPlacement="inline"

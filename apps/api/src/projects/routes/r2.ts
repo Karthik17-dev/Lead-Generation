@@ -592,7 +592,7 @@ projectsApp.openapi(
 // over the whole body guarantees the poll always answers fast: a degraded
 // dependency renders the alert as "unknown / no templates" instead of paging
 // us with the timeout error.
-const SANDBOX_HEALTH_BUDGET_MS = 12_000;
+const SANDBOX_HEALTH_BUDGET_MS = process.env.ZED_LOCAL_DEV === '1' ? 1_000 : 12_000;
 
 interface SandboxHealthPayload {
   primary_slug: string | null;

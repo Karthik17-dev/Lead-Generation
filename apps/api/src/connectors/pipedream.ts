@@ -35,8 +35,16 @@ const PD_BASE = 'https://api.pipedream.com';
  * of adding an intermediary. Utilities and native Zed apps are excluded too.
  */
 
+function isPlainConfigSecret(s?: string): boolean {
+  return Boolean(s && !s.startsWith('encrypted:') && s !== 'not-a-real-pipedream-client-id');
+}
+
 export function pipedreamConfigured(): boolean {
-  return !!(config.PIPEDREAM_CLIENT_ID && config.PIPEDREAM_CLIENT_SECRET && config.PIPEDREAM_PROJECT_ID);
+  return (
+    isPlainConfigSecret(config.PIPEDREAM_CLIENT_ID) &&
+    isPlainConfigSecret(config.PIPEDREAM_CLIENT_SECRET) &&
+    isPlainConfigSecret(config.PIPEDREAM_PROJECT_ID)
+  );
 }
 
 /**
@@ -497,16 +505,28 @@ export async function pipedreamCatalogPage(input: {
   const { snapshot } = getCatalogSnapshot(crawlPage);
 
   if (!snapshot) {
-    const live = await browsePipedreamApps(input.q, input.cursor);
-    return {
-      apps: live.apps,
-      categories: [],
-      total: live.total ?? live.apps.length,
-      ...(live.nextCursor ? { nextCursor: live.nextCursor } : {}),
-      hasMore: live.hasMore,
-      indexReady: false,
-      excludedNoActions: 0,
-    };
+    try {
+      const live = await browsePipedreamApps(input.q, input.cursor);
+      return {
+        apps: live.apps,
+        categories: [],
+        total: live.total ?? live.apps.length,
+        ...(live.nextCursor ? { nextCursor: live.nextCursor } : {}),
+        hasMore: live.hasMore,
+        indexReady: false,
+        excludedNoActions: 0,
+      };
+    } catch (err) {
+      console.warn('[pipedream] live catalog fetch failed, returning empty catalog:', err);
+      return {
+        apps: [],
+        categories: [],
+        total: 0,
+        hasMore: false,
+        indexReady: false,
+        excludedNoActions: 0,
+      };
+    }
   }
 
   const scoped = input.category

@@ -186,15 +186,12 @@ async function computeEntry(
   previewSandboxId: string,
   userId: string,
 ): Promise<CacheEntry> {
-  const expiresAt = Date.now() + CACHE_TTL_MS;
-
-  const ref = await resolveSandboxRef(previewSandboxId);
   const primaryAccountId = await resolveAccountId(userId);
   const platformAdmin = await isPlatformAdmin(primaryAccountId);
+  const ref = await resolveSandboxRef(previewSandboxId);
 
   if (!ref) {
-    // No sandbox row found. Allow only platform admins so the lookup-by-name
-    // dev path (local bridge etc.) still works for staff debugging.
+    // No sandbox row found. Allow platform admins, or short negative cache (1s) so newly created sandboxes aren't blocked for 5 minutes.
     return {
       allowed: platformAdmin,
       payload: platformAdmin
@@ -205,13 +202,13 @@ async function computeEntry(
             scopes: ['*'],
           }
         : null,
-      expiresAt,
+      expiresAt: Date.now() + (platformAdmin ? CACHE_TTL_MS : 1000),
     };
   }
 
   const member = platformAdmin || (await isAccountMember(userId, ref.accountId));
   if (!member) {
-    return { allowed: false, payload: null, expiresAt };
+    return { allowed: false, payload: null, expiresAt: Date.now() + 1000 };
   }
 
   return {
@@ -222,8 +219,16 @@ async function computeEntry(
       sandboxRole: platformAdmin ? 'platform_admin' : 'member',
       scopes: ['*'],
     },
-    expiresAt,
+    expiresAt: Date.now() + CACHE_TTL_MS,
   };
+}
+
+export function invalidatePreviewOwnership(previewSandboxId: string): void {
+  for (const key of previewContextCache.keys()) {
+    if (key.startsWith(`${previewSandboxId}:`)) {
+      previewContextCache.delete(key);
+    }
+  }
 }
 
 async function getOrCompute(

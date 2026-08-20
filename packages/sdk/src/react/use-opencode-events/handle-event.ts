@@ -139,12 +139,12 @@ export function createEventHandler(deps: {
             const exists = old.findIndex((s) => s.id === info.id);
             if (exists >= 0) {
               // Already exists — check if actually changed
-              if (old[exists].time.updated === info.time.updated) return old;
+              if (old[exists].time?.updated === info.time?.updated) return old;
               const next = [...old];
               next[exists] = info;
-              return next.sort((a, b) => b.time.updated - a.time.updated);
+              return next.sort((a, b) => (b.time?.updated ?? b.time?.created ?? 0) - (a.time?.updated ?? a.time?.created ?? 0));
             }
-            return [info, ...old].sort((a, b) => b.time.updated - a.time.updated);
+            return [info, ...old].sort((a, b) => (b.time?.updated ?? b.time?.created ?? 0) - (a.time?.updated ?? a.time?.created ?? 0));
           });
           queryClient.setQueryData(opencodeKeys.runtimeSession(info.id), info);
           patchZedSessionTitleMirrors(
@@ -183,11 +183,13 @@ export function createEventHandler(deps: {
             // Shallow check: skip only if BOTH the timestamp and the title are
             // unchanged. Title alone can flip (opencode auto-titles) without a
             // perceptible time bump, and dropping that would keep the tab stale.
-            if (old[idx].time.updated === info.time.updated && old[idx].title === info.title)
+            const oldTime = old[idx].time?.updated ?? old[idx].time?.created ?? 0;
+            const infoTime = info.time?.updated ?? info.time?.created ?? 0;
+            if (oldTime === infoTime && old[idx].title === info.title)
               return old;
             const next = [...old];
             next[idx] = info;
-            return next.sort((a, b) => b.time.updated - a.time.updated);
+            return next.sort((a, b) => (b.time?.updated ?? b.time?.created ?? 0) - (a.time?.updated ?? a.time?.created ?? 0));
           });
           if (titleChanged) {
             // Instant local mirror first (the refetch below can race the

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
+set -o pipefail 2>/dev/null || true
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SUPABASE_DIR="$ROOT_DIR/supabase"
