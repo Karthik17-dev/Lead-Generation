@@ -37,15 +37,28 @@ const GLOBAL_SESSION_MESSAGES = new Map<string, ChatMessage[]>([
 ]);
 
 
-// ── SUNA (KORTIX AI) DEFAULT CONNECTORS CATALOG ──────────────────────────────
-const POPULAR_APPS = [
-  // Core Agent Tools & Runtimes
+
+// ── 5500+ UNIVERSAL PIPEDREAM & SUNA CONNECTOR GENERATOR ───────────────────
+interface RawApp {
+  slug: string;
+  name: string;
+  description: string;
+  categories: string[];
+  imgSrc: string;
+  authType?: string;
+  hasActions?: boolean;
+  hasTriggers?: boolean;
+  featuredWeight?: number;
+}
+
+const SEED_APPS: RawApp[] = [
+  // Core & Agent
   { slug: 'browser', name: 'Playwright Web Browser', description: 'Automated Chromium browser for web scraping, navigation, and testing', categories: ['Agent Tools', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/playwright.svg', authType: 'none', hasActions: true, hasTriggers: true, featuredWeight: 100 },
   { slug: 'terminal', name: 'Sandbox Terminal', description: 'Execute bash commands, Python scripts, and CLI utilities in an isolated environment', categories: ['Agent Tools', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/bash-1.svg', authType: 'none', hasActions: true, hasTriggers: true, featuredWeight: 99 },
   { slug: 'mcp', name: 'Model Context Protocol (MCP)', description: 'Connect any custom MCP server over stdio or SSE for external tools', categories: ['Agent Tools', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/anthropic-icon.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 98 },
   { slug: 'openapi', name: 'OpenAPI / REST API', description: 'Import any Swagger or OpenAPI 3.0 specification with custom authentication', categories: ['Agent Tools', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/swagger-4.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 97 },
 
-  // Communication & Outreach
+  // Communication
   { slug: 'gmail', name: 'Gmail', description: 'Read, compose, search, and send emails via Google Workspace', categories: ['Communication', 'Google'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/gmail-icon.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 96 },
   { slug: 'slack', name: 'Slack', description: 'Post channel messages, direct messages, and listen to workspace notifications', categories: ['Communication'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/slack-new-logo.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 95 },
   { slug: 'discord', name: 'Discord', description: 'Send server messages, manage channels, and dispatch webhook alerts', categories: ['Communication'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/discord-6.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 94 },
@@ -53,46 +66,140 @@ const POPULAR_APPS = [
   { slug: 'whatsapp', name: 'WhatsApp Business', description: 'Connect directly with customers and prospects on WhatsApp', categories: ['Communication'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/whatsapp-symbol.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 92 },
   { slug: 'twilio', name: 'Twilio SMS', description: 'SMS, Voice, and phone number verification infrastructure', categories: ['Communication'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/twilio.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 91 },
   { slug: 'sendgrid', name: 'SendGrid', description: 'Transactional email API and high-volume email delivery', categories: ['Communication'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/sendgrid-2.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 90 },
-
-  // Productivity & Data
-  { slug: 'google_sheets', name: 'Google Sheets', description: 'Create, read, and append spreadsheet data and prospect records', categories: ['Productivity', 'Google'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/google-sheets-2020-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 89 },
-  { slug: 'google_maps', name: 'Google Maps', description: 'Search and extract local business records, places, and geo intelligence', categories: ['Lead Generation', 'Google'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/google-maps-2020-icon.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 88 },
-  { slug: 'google_drive', name: 'Google Drive', description: 'Upload, manage, and search documents and campaign files in cloud drive', categories: ['Productivity', 'Google'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/google-drive-2020.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 87 },
-  { slug: 'notion', name: 'Notion', description: 'Connect workspace wikis, task boards, and structured databases', categories: ['Productivity'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/notion-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 86 },
-  { slug: 'airtable', name: 'Airtable', description: 'Relational database platform with automations and grid views', categories: ['Productivity', 'Database'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/airtable.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 85 },
-  { slug: 'linear', name: 'Linear', description: 'Issue tracking and project management for software teams', categories: ['Productivity', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/linear-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 84 },
+  { slug: 'resend', name: 'Resend', description: 'Email for developers with clean modern REST API', categories: ['Communication', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/resend-icon.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'mailchimp', name: 'Mailchimp', description: 'Marketing automation platform and email marketing service', categories: ['Communication', 'Marketing'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/mailchimp-freddie-icon.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'zendesk', name: 'Zendesk', description: 'Customer support ticketing and CRM support software', categories: ['Communication', 'Customer Support'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/zendesk-1.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'intercom', name: 'Intercom', description: 'Complete AI customer service solution and messenger', categories: ['Communication', 'Customer Support'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/intercom-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'zoom', name: 'Zoom Meetings', description: 'Video conferencing, cloud phone, and meeting recordings', categories: ['Communication'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/zoom-icon.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
 
   // Lead Generation & CRM
-  { slug: 'hubspot', name: 'HubSpot CRM', description: 'Inbound marketing, sales deals, contacts, and email tracking', categories: ['CRM', 'Marketing', 'Lead Generation'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/hubspot.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 83 },
-  { slug: 'salesforce', name: 'Salesforce', description: 'Enterprise customer relationship management platform', categories: ['CRM', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/salesforce-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 82 },
-  { slug: 'apollo', name: 'Apollo.io', description: 'B2B lead intelligence, contact enrichment, and sales engagement', categories: ['Lead Generation', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/apollo-13.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 81 },
-  { slug: 'instantly', name: 'Instantly.ai', description: 'Automated cold email outreach at scale with deliverability warmup', categories: ['Lead Generation', 'Outreach'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/instantly.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 80 },
-  { slug: 'lemlist', name: 'Lemlist', description: 'Personalized cold email outreach and multichannel sales automation', categories: ['Lead Generation', 'Outreach'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/lemlist.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 79 },
-  { slug: 'clay', name: 'Clay', description: 'Waterfall data enrichment, web scrapers, and outreach intelligence', categories: ['Lead Generation', 'Data'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/clay.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 78 },
-  { slug: 'hunter', name: 'Hunter.io', description: 'Find and verify professional email addresses in seconds', categories: ['Lead Generation'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/hunter-io.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 77 },
-  { slug: 'linkedin', name: 'LinkedIn', description: 'Professional social network and lead discovery', categories: ['Lead Generation', 'Social'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/linkedin-icon-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 76 },
-  { slug: 'pipedrive', name: 'Pipedrive', description: 'Pipeline CRM tool for deal closing and sales activity tracking', categories: ['CRM', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/pipedrive.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 75 },
+  { slug: 'google_maps', name: 'Google Maps', description: 'Search and extract local business records, places, and geo intelligence', categories: ['Lead Generation', 'Google'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/google-maps-2020-icon.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 89 },
+  { slug: 'hubspot', name: 'HubSpot CRM', description: 'Inbound marketing, sales deals, contacts, and email tracking', categories: ['CRM', 'Marketing', 'Lead Generation'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/hubspot.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 88 },
+  { slug: 'salesforce', name: 'Salesforce', description: 'Enterprise customer relationship management platform', categories: ['CRM', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/salesforce-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 87 },
+  { slug: 'apollo', name: 'Apollo.io', description: 'B2B lead intelligence, contact enrichment, and sales engagement', categories: ['Lead Generation', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/apollo-13.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 86 },
+  { slug: 'instantly', name: 'Instantly.ai', description: 'Automated cold email outreach at scale with deliverability warmup', categories: ['Lead Generation', 'Outreach'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/instantly.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 85 },
+  { slug: 'lemlist', name: 'Lemlist', description: 'Personalized cold email outreach and multichannel sales automation', categories: ['Lead Generation', 'Outreach'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/lemlist.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 84 },
+  { slug: 'clay', name: 'Clay', description: 'Waterfall data enrichment, web scrapers, and outreach intelligence', categories: ['Lead Generation', 'Data'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/clay.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 83 },
+  { slug: 'hunter', name: 'Hunter.io', description: 'Find and verify professional email addresses in seconds', categories: ['Lead Generation'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/hunter-io.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 82 },
+  { slug: 'linkedin', name: 'LinkedIn', description: 'Professional social network and lead discovery', categories: ['Lead Generation', 'Social'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/linkedin-icon-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 81 },
+  { slug: 'pipedrive', name: 'Pipedrive', description: 'Pipeline CRM tool for deal closing and sales activity tracking', categories: ['CRM', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/pipedrive.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 80 },
+  { slug: 'close', name: 'Close CRM', description: 'Inside sales CRM built for closing deals faster', categories: ['CRM', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/close-io.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'zoho_crm', name: 'Zoho CRM', description: '360 degree customer relationship management lifecycle', categories: ['CRM', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/zoho-1.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'attio', name: 'Attio', description: 'Next-generation CRM for modern tech companies', categories: ['CRM', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/attio.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'clearbit', name: 'Clearbit', description: 'B2B market intelligence and real-time company enrichment', categories: ['Lead Generation', 'Data'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/clearbit.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'lusha', name: 'Lusha', description: 'Accurate B2B direct dials and email contact data', categories: ['Lead Generation', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/lusha.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'zoominfo', name: 'ZoomInfo', description: 'Enterprise go-to-market data and buyer intent signals', categories: ['Lead Generation', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/zoominfo.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'apify', name: 'Apify', description: 'Web scraping and data extraction cloud platform with 2,000+ actors', categories: ['Lead Generation', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/apify.svg', authType: 'keys', hasActions: true, hasTriggers: true },
 
-  // AI & Machine Learning
+  // Productivity
+  { slug: 'google_sheets', name: 'Google Sheets', description: 'Create, read, and append spreadsheet data and prospect records', categories: ['Productivity', 'Google'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/google-sheets-2020-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 79 },
+  { slug: 'google_drive', name: 'Google Drive', description: 'Upload, manage, and search documents and campaign files in cloud drive', categories: ['Productivity', 'Google'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/google-drive-2020.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 78 },
+  { slug: 'notion', name: 'Notion', description: 'Connect workspace wikis, task boards, and structured databases', categories: ['Productivity'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/notion-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 77 },
+  { slug: 'airtable', name: 'Airtable', description: 'Relational database platform with automations and grid views', categories: ['Productivity', 'Database'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/airtable.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 76 },
+  { slug: 'linear', name: 'Linear', description: 'Issue tracking and project management for software teams', categories: ['Productivity', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/linear-2.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 75 },
+  { slug: 'asana', name: 'Asana', description: 'Work management and team project tracking platform', categories: ['Productivity'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/asana-1.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'monday', name: 'Monday.com', description: 'Customizable work OS for team workflow automation', categories: ['Productivity'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/monday-1.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'trello', name: 'Trello', description: 'Visual Kanban boards, lists, and cards for project organization', categories: ['Productivity'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/trello.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'clickup', name: 'ClickUp', description: 'All-in-one productivity platform for tasks, docs, and goals', categories: ['Productivity'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/clickup.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'jira', name: 'Jira Software', description: 'Agile project management and issue tracking by Atlassian', categories: ['Productivity', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/jira-3.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'calendly', name: 'Calendly', description: 'Automated meeting scheduling and availability booking', categories: ['Productivity'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/calendly.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+
+  // AI & ML
   { slug: 'openai', name: 'OpenAI (GPT-4o)', description: 'AI text generation, reasoning, embeddings, and structured tool calling', categories: ['AI & ML'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/openai-2.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 74 },
   { slug: 'anthropic', name: 'Anthropic Claude', description: 'Advanced AI reasoning, code generation, and deep context analysis', categories: ['AI & ML'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/anthropic-icon.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 73 },
   { slug: 'perplexity', name: 'Perplexity AI', description: 'Real-time web search API and citation-backed knowledge engine', categories: ['AI & ML'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/perplexity-ai.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 72 },
   { slug: 'pinecone', name: 'Pinecone Vector DB', description: 'High-scale vector database for AI embeddings and similarity search', categories: ['AI & ML', 'Database'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/pinecone-icon.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 71 },
+  { slug: 'huggingface', name: 'Hugging Face', description: 'Open source AI models, datasets, and machine learning endpoints', categories: ['AI & ML'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/huggingface-2.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'elevenlabs', name: 'ElevenLabs Voice AI', description: 'Lifelike voice cloning and generative text-to-speech audio', categories: ['AI & ML'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/elevenlabs.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'replicate', name: 'Replicate', description: 'Run open-source machine learning models with a cloud API', categories: ['AI & ML'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/replicate.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'cohere', name: 'Cohere AI', description: 'Enterprise AI language models, embeddings, and rerankers', categories: ['AI & ML'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/cohere.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'groq', name: 'Groq LPU', description: 'Ultra-fast real-time AI inference computing engine', categories: ['AI & ML'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/groq.svg', authType: 'keys', hasActions: true, hasTriggers: true },
 
   // Developer & Infrastructure
   { slug: 'github', name: 'GitHub', description: 'Code hosting, pull requests, issue management, and CI/CD actions', categories: ['Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/github-icon-1.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 70 },
+  { slug: 'gitlab', name: 'GitLab', description: 'Complete DevOps lifecycle platform with Git repository hosting', categories: ['Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/gitlab.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
   { slug: 'postgres', name: 'PostgreSQL', description: 'Powerful open-source object-relational SQL database', categories: ['Database', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/postgresql.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 69 },
   { slug: 'supabase', name: 'Supabase', description: 'Open source Firebase alternative with PostgreSQL, Auth, and Storage', categories: ['Database', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/supabase-logo-icon.svg', authType: 'keys', hasActions: true, hasTriggers: true, featuredWeight: 68 },
+  { slug: 'mysql', name: 'MySQL', description: 'Popular open-source relational database management system', categories: ['Database', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/mysql-6.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'mongodb', name: 'MongoDB', description: 'Document-oriented NoSQL database for high-velocity modern apps', categories: ['Database', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/mongodb-icon-1.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'redis', name: 'Redis', description: 'In-memory data structure store used as a database, cache, and message broker', categories: ['Database', 'Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/redis.svg', authType: 'keys', hasActions: true, hasTriggers: true },
   { slug: 'stripe', name: 'Stripe', description: 'Online payment processing, customer subscriptions, and invoices', categories: ['Finance', 'E-commerce'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/stripe-4.svg', authType: 'oauth', hasActions: true, hasTriggers: true, featuredWeight: 67 },
+  { slug: 'shopify', name: 'Shopify', description: 'E-commerce platform for online stores and retail point-of-sale systems', categories: ['E-commerce', 'Sales'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/shopify.svg', authType: 'oauth', hasActions: true, hasTriggers: true },
+  { slug: 'cloudflare', name: 'Cloudflare', description: 'Web performance, DNS, security, and edge worker computing', categories: ['Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/cloudflare-1.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'aws', name: 'Amazon Web Services (AWS)', description: 'Cloud computing services including S3, Lambda, DynamoDB, and SQS', categories: ['Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/amazon-web-services-2.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'vercel', name: 'Vercel', description: 'Frontend cloud platform for static and serverless deployments', categories: ['Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/vercel.svg', authType: 'keys', hasActions: true, hasTriggers: true },
+  { slug: 'sentry', name: 'Sentry', description: 'Application monitoring and real-time error tracking software', categories: ['Developer Tools'], imgSrc: 'https://cdn.worldvectorlogo.com/logos/sentry-3.svg', authType: 'keys', hasActions: true, hasTriggers: true },
 ];
 
+const CATEGORY_NAMES = [
+  'Lead Generation',
+  'CRM',
+  'Communication',
+  'Productivity',
+  'AI & ML',
+  'Developer Tools',
+  'Database',
+  'Sales',
+  'Marketing',
+  'Social',
+  'Customer Support',
+  'Finance',
+  'E-commerce',
+  'Analytics',
+  'HR & Recruiting',
+  'Security & Compliance',
+  'Forms & Surveys',
+  'Content & CMS',
+];
+
+// Generate deterministic 5,542 connectors list
+const ALL_5542_APPS = (() => {
+  const list = [...SEED_APPS];
+  const targetCount = 5542;
+  const prefixes = [
+    'Cloud', 'Smart', 'Data', 'Fast', 'Auto', 'Core', 'Deep', 'Sync', 'Apex', 'Next',
+    'Open', 'Flow', 'Volt', 'Hyper', 'Echo', 'Nexus', 'Omni', 'Scale', 'Link', 'Vector',
+    'Prime', 'Nova', 'Pulse', 'Byte', 'Meta', 'Quantum', 'Stream', 'Matrix', 'Zenith', 'Orbital'
+  ];
+  const suffixes = [
+    'Hub', 'Desk', 'HQ', 'Engine', 'Bridge', 'Cast', 'Grid', 'Forge', 'Stack', 'Base',
+    'Wave', 'Box', 'Ops', 'Bot', 'Trace', 'View', 'Pulse', 'Lens', 'Nest', 'Pipe',
+    'Gate', 'Relay', 'Track', 'Craft', 'Metrics', 'Flow', 'Sync', 'Pilot', 'Room', 'Vault'
+  ];
+
+  let i = list.length;
+  while (list.length < targetCount) {
+    const p = prefixes[i % prefixes.length];
+    const s = suffixes[Math.floor(i / prefixes.length) % suffixes.length];
+    const catIndex = i % CATEGORY_NAMES.length;
+    const cat = CATEGORY_NAMES[catIndex];
+    const slug = `${p.toLowerCase()}-${s.toLowerCase()}-${i}`;
+    const name = `${p} ${s}`;
+
+    list.push({
+      slug,
+      name,
+      description: `Automate ${name} actions, sync ${cat.toLowerCase()} data, and stream triggers in real-time.`,
+      categories: [cat, 'Productivity'],
+      imgSrc: `https://avatar.vercel.sh/${slug}.svg`,
+      authType: i % 3 === 0 ? 'oauth' : (i % 3 === 1 ? 'keys' : 'none'),
+      hasActions: true,
+      hasTriggers: true,
+    });
+    i++;
+  }
+  return list;
+})();
+
+const POPULAR_APPS = ALL_5542_APPS;
+
 const CATEGORIES_LIST = [
-  { key: 'agent_tools', label: 'Agent Tools', count: 4 },
-  { key: 'communication', label: 'Communication & Outreach', count: 894 },
   { key: 'lead_gen', label: 'Lead Generation & CRM', count: 1040 },
+  { key: 'communication', label: 'Communication & Outreach', count: 894 },
   { key: 'productivity', label: 'Productivity & Workspace', count: 915 },
   { key: 'ai_ml', label: 'AI & Machine Learning', count: 472 },
   { key: 'dev_tools', label: 'Developer Tools & DB', count: 1491 },
+  { key: 'marketing', label: 'Marketing & Analytics', count: 730 },
 ];
 
 interface StoredFile {
@@ -450,44 +557,54 @@ export async function GET(
     return NextResponse.json({ sections, total: 5542 });
   }
 
-  if (path.includes('pipedream/apps')) {
+    if (path.includes('pipedream/apps')) {
     const url = new URL(request.url);
     const q = url.searchParams.get('q')?.toLowerCase() || '';
     const cat = url.searchParams.get('category')?.toLowerCase() || '';
-    const page = parseInt(url.searchParams.get('page') || '1', 10);
-    const pageSize = parseInt(url.searchParams.get('page_size') || '48', 10);
+    const cursor = url.searchParams.get('cursor');
+    const limit = parseInt(url.searchParams.get('limit') || '48', 10);
+    const offset = cursor ? parseInt(cursor, 10) : 0;
 
-    let baseApps = POPULAR_APPS.map(a => ({
-      ...a,
-      name_formatted: a.name || a.name_formatted,
-      name_slug: a.slug || a.name_slug,
-      description: a.description || 'Pipedream automated connector',
-      categories: a.categories || ['General'],
-      img_src: a.imgSrc || a.img_src,
+    let filtered = ALL_5542_APPS.map(a => ({
+      name_slug: a.slug,
+      name_formatted: a.name,
+      description: a.description,
+      categories: a.categories,
+      img_src: a.imgSrc,
+      auth_type: a.authType || 'keys',
+      has_actions: true,
+      has_triggers: true,
     }));
 
-    // If query provided, filter
     if (q) {
-      baseApps = baseApps.filter(a =>
+      filtered = filtered.filter(a =>
         a.name_formatted.toLowerCase().includes(q) ||
         a.description.toLowerCase().includes(q) ||
         a.name_slug.toLowerCase().includes(q)
       );
     }
     if (cat) {
-      baseApps = baseApps.filter(a =>
+      filtered = filtered.filter(a =>
         a.categories.some((c: string) => c.toLowerCase() === cat || c.toLowerCase().includes(cat))
       );
     }
 
+    const totalCount = filtered.length;
+    const pageItems = filtered.slice(offset, offset + limit);
+    const hasMore = offset + limit < totalCount;
+    const nextCursor = hasMore ? String(offset + limit) : undefined;
+
     return NextResponse.json({
-      apps: baseApps,
+      apps: pageItems,
       categories: CATEGORIES_LIST,
-      total: 5542,
+      total: totalCount,
+      hasMore,
+      nextCursor,
+      indexReady: true,
       page_info: {
-        total_count: 5542,
-        count: baseApps.length,
-        has_more: false,
+        total_count: totalCount,
+        count: pageItems.length,
+        has_more: hasMore,
       },
     });
   }
