@@ -1,5 +1,6 @@
-import * as React from 'react';
 'use client';
+
+import * as React from 'react';
 
 import { ArrowLeftIcon, GlobeIcon, MonitorIcon, PlusIcon } from '@phosphor-icons/react';
 import { memo, useCallback } from 'react';
