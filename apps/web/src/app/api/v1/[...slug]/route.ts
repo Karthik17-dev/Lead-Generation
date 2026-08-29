@@ -365,75 +365,128 @@ export async function GET(
     return NextResponse.json(MOCK_ACCOUNTS[0]);
   }
 
-  // ── /connectors (KORTIX DEFAULT CATALOG) ────────────────────────────────────
+    // ── /connectors (5500+ PIPEDREAM / SUNA CATALOG) ──────────────────────────
   if (path.includes('pipedream/sections')) {
     const sections = [
       {
         key: 'featured',
-        label: 'Popular',
-        total: 12,
-        apps: POPULAR_APPS.slice(0, 12),
-      },
-      {
-        key: 'productivity',
-        label: 'Productivity',
-        total: 915,
-        apps: POPULAR_APPS.filter(a => a.categories.includes('Productivity') || a.categories.includes('Google')),
-      },
-      {
-        key: 'communication',
-        label: 'Communication',
-        total: 894,
-        apps: POPULAR_APPS.filter(a => a.categories.includes('Communication')),
+        label: 'Popular & Featured',
+        total: 24,
+        apps: POPULAR_APPS.slice(0, 24).map(a => ({
+          ...a,
+          name_formatted: a.name || a.name_formatted,
+          name_slug: a.slug || a.name_slug,
+          description: a.description || 'Pipedream automated connector',
+          categories: a.categories || ['Featured'],
+          img_src: a.imgSrc || a.img_src,
+        })),
       },
       {
         key: 'crm',
-        label: 'CRM & Sales',
-        total: 428,
-        apps: POPULAR_APPS.filter(a => a.categories.includes('CRM') || a.categories.includes('Sales')),
+        label: 'Lead Generation & CRM',
+        total: 1040,
+        apps: POPULAR_APPS.filter(a => (a.categories || []).some(c => ['CRM', 'Sales', 'Lead Generation', 'Outreach', 'Marketing'].includes(c))).map(a => ({
+          ...a,
+          name_formatted: a.name || a.name_formatted,
+          name_slug: a.slug || a.name_slug,
+          description: a.description || 'CRM & Lead generation connector',
+          categories: a.categories || ['Lead Generation'],
+          img_src: a.imgSrc || a.img_src,
+        })),
       },
       {
-        key: 'dev_tools',
-        label: 'Developer Tools',
-        total: 951,
-        apps: POPULAR_APPS.filter(a => a.categories.includes('Developer Tools') || a.categories.includes('Database')),
+        key: 'communication',
+        label: 'Communication & Outreach',
+        total: 894,
+        apps: POPULAR_APPS.filter(a => (a.categories || []).includes('Communication') || (a.categories || []).includes('Google')).map(a => ({
+          ...a,
+          name_formatted: a.name || a.name_formatted,
+          name_slug: a.slug || a.name_slug,
+          description: a.description || 'Communication & Messaging connector',
+          categories: a.categories || ['Communication'],
+          img_src: a.imgSrc || a.img_src,
+        })),
+      },
+      {
+        key: 'productivity',
+        label: 'Productivity & Workspace',
+        total: 915,
+        apps: POPULAR_APPS.filter(a => (a.categories || []).includes('Productivity')).map(a => ({
+          ...a,
+          name_formatted: a.name || a.name_formatted,
+          name_slug: a.slug || a.name_slug,
+          description: a.description || 'Productivity & Database connector',
+          categories: a.categories || ['Productivity'],
+          img_src: a.imgSrc || a.img_src,
+        })),
       },
       {
         key: 'ai_ml',
         label: 'AI & Machine Learning',
         total: 472,
-        apps: POPULAR_APPS.filter(a => a.categories.includes('AI & ML')),
+        apps: POPULAR_APPS.filter(a => (a.categories || []).includes('AI & ML')).map(a => ({
+          ...a,
+          name_formatted: a.name || a.name_formatted,
+          name_slug: a.slug || a.name_slug,
+          description: a.description || 'AI Reasoning & ML connector',
+          categories: a.categories || ['AI & ML'],
+          img_src: a.imgSrc || a.img_src,
+        })),
+      },
+      {
+        key: 'dev_tools',
+        label: 'Developer Tools & DB',
+        total: 1491,
+        apps: POPULAR_APPS.filter(a => (a.categories || []).some(c => ['Developer Tools', 'Database', 'Agent Tools'].includes(c))).map(a => ({
+          ...a,
+          name_formatted: a.name || a.name_formatted,
+          name_slug: a.slug || a.name_slug,
+          description: a.description || 'Developer API & Cloud connector',
+          categories: a.categories || ['Developer Tools'],
+          img_src: a.imgSrc || a.img_src,
+        })),
       },
     ];
-    return NextResponse.json({ sections, total: 3238 });
+    return NextResponse.json({ sections, total: 5542 });
   }
 
   if (path.includes('pipedream/apps')) {
     const url = new URL(request.url);
     const q = url.searchParams.get('q')?.toLowerCase() || '';
     const cat = url.searchParams.get('category')?.toLowerCase() || '';
+    const page = parseInt(url.searchParams.get('page') || '1', 10);
+    const pageSize = parseInt(url.searchParams.get('page_size') || '48', 10);
 
-    let filtered = POPULAR_APPS;
+    let baseApps = POPULAR_APPS.map(a => ({
+      ...a,
+      name_formatted: a.name || a.name_formatted,
+      name_slug: a.slug || a.name_slug,
+      description: a.description || 'Pipedream automated connector',
+      categories: a.categories || ['General'],
+      img_src: a.imgSrc || a.img_src,
+    }));
+
+    // If query provided, filter
     if (q) {
-      filtered = filtered.filter(a =>
+      baseApps = baseApps.filter(a =>
         a.name_formatted.toLowerCase().includes(q) ||
         a.description.toLowerCase().includes(q) ||
         a.name_slug.toLowerCase().includes(q)
       );
     }
     if (cat) {
-      filtered = filtered.filter(a =>
-        a.categories.some(c => c.toLowerCase() === cat)
+      baseApps = baseApps.filter(a =>
+        a.categories.some((c: string) => c.toLowerCase() === cat || c.toLowerCase().includes(cat))
       );
     }
 
     return NextResponse.json({
-      apps: filtered,
+      apps: baseApps,
       categories: CATEGORIES_LIST,
       total: 5542,
       page_info: {
         total_count: 5542,
-        count: filtered.length,
+        count: baseApps.length,
         has_more: false,
       },
     });
@@ -445,7 +498,12 @@ export async function GET(
       required: [],
       optional: [],
       total: 5542,
-      apps: POPULAR_APPS,
+      apps: POPULAR_APPS.map(a => ({
+        ...a,
+        name_formatted: a.name || a.name_formatted,
+        name_slug: a.slug || a.name_slug,
+        img_src: a.imgSrc || a.img_src,
+      })),
     });
   }
 
