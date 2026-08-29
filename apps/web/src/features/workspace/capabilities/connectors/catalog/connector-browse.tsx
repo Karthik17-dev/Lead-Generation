@@ -63,30 +63,50 @@ function CatalogAffordance({ connected }: { connected: boolean }) {
  * `width`/`height` are set so the box is reserved before the image arrives and
  * the grid never reflows around a late favicon.
  */
-function ConnectorIcon({ icon, name, computer = false }: { icon: string | null; name?: string; computer?: boolean }) {
-  const [failed, setFailed] = React.useState(false);
+function ConnectorIcon({
+  icon,
+  name,
+  categories,
+  computer = false,
+}: {
+  icon: string | null;
+  name?: string;
+  categories?: string[];
+  computer?: boolean;
+}) {
+  const [hasError, setHasError] = React.useState(false);
 
-  if (!icon || failed) {
-    const initial = (name || 'C').charAt(0).toUpperCase();
+  if (computer) {
     return (
-      <span className="bg-primary/10 text-primary border-border/40 flex size-9 shrink-0 items-center justify-center rounded-md border font-semibold text-xs shadow-xs">
-        {computer ? <MonitorIcon className="size-5" /> : initial}
+      <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-md border border-border/40 shadow-xs">
+        <MonitorIcon className="size-5" />
       </span>
     );
   }
+
+  if (icon && !hasError) {
+    return (
+      <span className="bg-card flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 p-1 shadow-xs transition-colors group-hover:border-border">
+        <img
+          src={icon}
+          alt={name || ''}
+          width={28}
+          height={28}
+          loading="lazy"
+          decoding="async"
+          onError={() => setHasError(true)}
+          className="size-6 object-contain"
+        />
+      </span>
+    );
+  }
+
   return (
-    <span className="bg-card border-border/40 flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border p-1 shadow-xs">
-      <img
-        src={icon}
-        alt=""
-        width={32}
-        height={32}
-        loading="lazy"
-        decoding="async"
-        onError={() => setFailed(true)}
-        className="size-7 object-contain"
-      />
-    </span>
+    <EntityAvatar
+      size="md"
+      label={name || 'Connector'}
+      className="size-9 rounded-md border border-border/50 shadow-xs font-semibold text-xs"
+    />
   );
 }
 
