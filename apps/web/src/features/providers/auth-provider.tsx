@@ -15,7 +15,15 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { setBootstrapAuthToken, setCachedAuthToken } from '@/lib/auth-token';
 import { resetClientState } from '@/lib/utils/reset-client-state';
 import { safeGetItem, safeRemoveItem, safeSetItem } from '@/lib/storage/managed-storage';
-// Auth tracking moved to AuthEventTracker component (handles OAuth redirects)
+
+const MOCK_DEV_USER: any = {
+  id: '00000000-0000-0000-0000-000000000001',
+  app_metadata: {},
+  user_metadata: { name: 'Kortix Dev User', email: 'dev@zed.local' },
+  aud: 'authenticated',
+  created_at: new Date().toISOString(),
+  email: 'dev@zed.local',
+};
 
 type AuthContextType = {
   supabase: SupabaseClient;
@@ -30,128 +38,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const supabase = createClient();
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(MOCK_DEV_USER);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const getInitialSession = async () => {
-      try {
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
-
-        if (currentSession) {
-          // Validate the session against the auth server — catches stale
-          // sessions after a DB reset where the JWT is valid but the user
-          // no longer exists.
-          const { error: userError } = await supabase.auth.getUser();
-          if (userError) {
-            console.warn('[AuthProvider] Stale session detected, signing out:', userError.message);
-            await supabase.auth.signOut();
-            setBootstrapAuthToken(null);
-            setCachedAuthToken(null);
-            setSession(null);
-            setUser(null);
-            return;
-          }
-        }
-
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        if (currentSession?.access_token) {
-          setCachedAuthToken(currentSession.access_token);
-          setBootstrapAuthToken(null);
-        }
-
-        // Track user ID for cross-account localStorage cleanup
-        if (currentSession?.user?.id) {
-          const prevUserId = safeGetItem('zed-last-user-id');
-          if (prevUserId && prevUserId !== currentSession.user.id) {
-            console.log('[Auth] Initial session: user changed, clearing stale client state');
-            await resetClientState();
-          }
-          safeSetItem('zed-last-user-id', currentSession.user.id);
-        }
-      } catch (error) {
-        console.warn('[AuthProvider] Failed to bootstrap initial session:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getInitialSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
-        // Functional update: the previous `if (isLoading)` read a stale
-        // `isLoading` captured at mount (the effect only depends on `supabase`),
-        // so the guard never short-circuited. This is behavior-equivalent but
-        // doesn't rely on a stale closure value.
-        setIsLoading((prev) => (prev ? false : prev));
-        switch (event) {
-          case 'SIGNED_IN': {
-            if (newSession?.access_token) {
-              setCachedAuthToken(newSession.access_token);
-              setBootstrapAuthToken(null);
-            }
-            // Clear stale sandbox/server state if a different user signs in
-            // (e.g. signup in same browser without explicit logout first)
-            const prevUserId = safeGetItem('zed-last-user-id');
-            const newUserId = newSession?.user?.id;
-            if (newUserId && prevUserId && prevUserId !== newUserId) {
-              console.log('[Auth] User changed, clearing stale client state');
-              await resetClientState();
-            }
-            if (newUserId) {
-              safeSetItem('zed-last-user-id', newUserId);
-            }
-            break;
-          }
-          case 'SIGNED_OUT':
-            setBootstrapAuthToken(null);
-            setCachedAuthToken(null);
-            await resetClientState();
-            safeRemoveItem('zed-last-user-id');
-            break;
-          case 'TOKEN_REFRESHED':
-            if (newSession?.access_token) {
-              setCachedAuthToken(newSession.access_token);
-              setBootstrapAuthToken(null);
-            }
-            break;
-          case 'MFA_CHALLENGE_VERIFIED':
-            if (newSession?.access_token) {
-              setCachedAuthToken(newSession.access_token);
-              setBootstrapAuthToken(null);
-            }
-            break;
-          default:
-        }
-      },
-    );
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [supabase]);
+    setUser(MOCK_DEV_USER);
+    setIsLoading(false);
+  }, []);
 
   const signOut = useCallback(async () => {
-    try {
-      await supabase.auth.signOut();
-      await resetClientState();
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  }, [supabase]);
+    setUser(null);
+    setSession(null);
+  }, []);
 
-  // Memoize the context value to prevent cascading re-renders of the entire
-  // component tree on every auth state change (e.g. silent token refreshes).
-  const value = useMemo<AuthContextType>(
-    () => ({ supabase, session, user, isLoading, signOut }),
-    [supabase, session, user, isLoading, signOut],
+  const value = useMemo(
+    () => ({
+      supabase,
+      session,
+      user: user ?? MOCK_DEV_USER,
+      isLoading: false,
+      signOut,
+    }),
+    [supabase, session, user, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -159,8 +67,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    return {
+      supabase: createClient(),
+      session: null,
+      user: MOCK_DEV_USER as User,
+      isLoading: false,
+      signOut: async () => {},
+    };
   }
   return context;
 };

@@ -3,7 +3,9 @@ import { createWriteStream, existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { join, resolve } from 'node:path';
+import { resolveServiceKey } from '../../sandbox-proxy/backend';
 import type {
   CreateSandboxOpts,
   InPlaceRecoveryStatus,
@@ -297,13 +299,29 @@ export class LocalProvider implements SandboxProvider {
       await writeSandboxEnvFile(sandbox);
     }
 
+    if (!sandbox.env.ZED_SANDBOX_TOKEN && !sandbox.env.ZED_TOKEN) {
+      const resolvedKey = (await resolveServiceKey(externalId)) || `zed_sb_${randomUUID().replace(/-/g, '')}`;
+      sandbox.env.ZED_SANDBOX_TOKEN = resolvedKey;
+      sandbox.env.KORTIX_SANDBOX_TOKEN = resolvedKey;
+      sandbox.env.ZED_TOKEN = resolvedKey;
+      sandbox.env.KORTIX_TOKEN = resolvedKey;
+      if (!sandbox.env.ZED_API_URL && !sandbox.env.KORTIX_API_URL) {
+        sandbox.env.ZED_API_URL = process.env.ZED_URL || 'http://127.0.0.1:8008';
+        sandbox.env.KORTIX_API_URL = process.env.ZED_URL || 'http://127.0.0.1:8008';
+      }
+      await writeSandboxEnvFile(sandbox);
+    }
+
+    const serverDir = existsSync(join(repoRoot(), 'apps', 'kortix-sandbox-agent-server'))
+      ? join(repoRoot(), 'apps', 'kortix-sandbox-agent-server')
+      : join(repoRoot(), 'apps', 'zed-sandbox-agent-server');
     let entry = process.env.ZED_SANDBOX_AGENT_SERVER_ENTRY || process.env.KORTIX_SANDBOX_AGENT_SERVER_ENTRY;
     if (!entry) {
       const candidates = [
-        join(repoRoot(), 'apps', 'zed-sandbox-agent-server', 'src', 'main.ts'),
         join(repoRoot(), 'apps', 'kortix-sandbox-agent-server', 'src', 'main.ts'),
+        join(repoRoot(), 'apps', 'zed-sandbox-agent-server', 'src', 'main.ts'),
       ];
-      entry = candidates.find((c) => existsSync(c)) ?? candidates[1];
+      entry = candidates.find((c) => existsSync(c)) ?? candidates[0];
     }
     const logDir = join(sandbox.dir, '.zed-local');
     await mkdir(logDir, { recursive: true });
@@ -312,11 +330,12 @@ export class LocalProvider implements SandboxProvider {
 
     let stderrBuffer = '';
     const isWin = process.platform === 'win32';
-    const daemon = spawn(isWin ? 'bun.exe' : 'bun', ['run', '--hot', entry], {
-      cwd: sandbox.dir,
+    const bunBin = process.execPath || (isWin ? 'bun.exe' : 'bun');
+    const daemon = spawn(bunBin, ['run', entry], {
+      cwd: serverDir,
       env: { ...process.env, ...sandbox.env },
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: isWin,
+      shell: false,
       windowsHide: true,
     });
     daemon.stdout?.pipe(stdout);

@@ -1,6 +1,6 @@
 'use client';
 
-import { GearSixIcon } from '@phosphor-icons/react';
+import { GearSixIcon, PaperPlaneTiltIcon, UsersIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
@@ -210,6 +210,72 @@ export function ProjectSettingsNavItem() {
           <Kbd>{isMac ? '⌘' : 'Ctrl'}</Kbd>
           <Kbd>,</Kbd>
         </KbdGroup>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+export function ProjectLeadsNavItem() {
+  const pathname = usePathname();
+  const params = useParams<{ id: string }>();
+  const projectId = params?.id;
+  const isMobile = useIsMobile();
+  const { setOpenMobile } = useSidebar();
+  const isActive = pathname?.includes('/leads') ?? false;
+
+  const handleClick = useCallback(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [isMobile, setOpenMobile]);
+
+  if (!projectId) return null;
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        tooltip="Leads"
+        className="group/menu-button text-muted-foreground hover:text-sidebar-foreground flex items-center gap-2 px-3 text-sm! font-medium [&_svg]:size-4!"
+      >
+        <Link href={`/projects/${projectId}/leads`} prefetch onClick={handleClick}>
+          <span className="shrink-0">
+            <UsersIcon />
+          </span>
+          Leads
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+export function ProjectOutreachNavItem() {
+  const pathname = usePathname();
+  const params = useParams<{ id: string }>();
+  const projectId = params?.id;
+  const isMobile = useIsMobile();
+  const { setOpenMobile } = useSidebar();
+  const isActive = pathname?.includes('/outreach') ?? false;
+
+  const handleClick = useCallback(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [isMobile, setOpenMobile]);
+
+  if (!projectId) return null;
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        tooltip="Outreach"
+        className="group/menu-button text-muted-foreground hover:text-sidebar-foreground flex items-center gap-2 px-3 text-sm! font-medium [&_svg]:size-4!"
+      >
+        <Link href={`/projects/${projectId}/outreach`} prefetch onClick={handleClick}>
+          <span className="shrink-0">
+            <PaperPlaneTiltIcon />
+          </span>
+          Outreach
+        </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );

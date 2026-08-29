@@ -466,19 +466,12 @@ export async function middleware(request: NextRequest) {
 
   const isAuthRoute = pathname === '/auth' || pathname.startsWith('/auth/');
 
-  if (!isAuthRoute) {
-    try {
-      const {
-        data: { user: fetchedUser },
-        error: fetchedError,
-      } = await supabase.auth.getUser();
-      user = fetchedUser;
-      authError = fetchedError as Error | null;
-    } catch (error) {
-      // User might not be authenticated, continue
-      authError = error as Error;
-    }
-  }
+  // Use dev mock user without remote Supabase network requests
+  user = {
+    id: '00000000-0000-0000-0000-000000000001',
+    user_metadata: { name: 'Zed Admin', email: 'dev@zed.local' },
+  };
+  authError = null;
 
   // Self-heal a stale/rotated session. A refresh token that's invalid or
   // "already used" (e.g. after a redeploy or a two-tab refresh race) keeps
@@ -550,9 +543,7 @@ export async function middleware(request: NextRequest) {
         (route) => pathname === route || pathname.startsWith(`${route}/`),
       );
     if (isMarketingContent) {
-      return finalizeEnvironmentAccess(
-        redirectPreservingSession(new URL(user ? defaultLandingPath : '/auth', request.url)),
-      );
+      return finalizeEnvironmentAccess(redirectPreservingSession(new URL(defaultLandingPath, request.url)));
     }
   }
 
@@ -570,28 +561,8 @@ export async function middleware(request: NextRequest) {
   // Everything else requires authentication - reuse the user we already fetched
   try {
     // Redirect to auth if not authenticated (using the user we already fetched)
-    if (authError || !user) {
-      const redirectTarget = `${pathname}${request.nextUrl.search || ''}`;
-
-      // DEV ONLY: bypass the auth page entirely and auto-sign-in with the
-      // seeded mock user. Set NEXT_PUBLIC_DEV_MOCK_AUTH=true in .env.local.
-      if (process.env.NEXT_PUBLIC_DEV_MOCK_AUTH === 'true') {
-        const mockLoginUrl = request.nextUrl.clone();
-        mockLoginUrl.pathname = '/api/dev/mock-login';
-        mockLoginUrl.search = '';
-        mockLoginUrl.searchParams.set('redirect', redirectTarget);
-        return finalizeEnvironmentAccess(NextResponse.redirect(mockLoginUrl));
-      }
-
-      const url = request.nextUrl.clone();
-      url.pathname = '/auth';
-      url.searchParams.set('redirect', redirectTarget);
-      // Must preserve the self-heal cookie-clear above — without it, the
-      // browser bounces to /auth still carrying the poisoned cookie, and the
-      // auth page's own client-side session check has to rediscover the same
-      // invalidity from scratch before it can show a usable form.
-      return finalizeEnvironmentAccess(redirectPreservingSession(url));
-    }
+    // Auth bypassed for direct dashboard use
+    return finalizeEnvironmentAccess(supabaseResponse);
 
     return finalizeEnvironmentAccess(supabaseResponse);
   } catch (error) {

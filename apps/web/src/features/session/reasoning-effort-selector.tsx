@@ -137,13 +137,13 @@ export function useReasoningEffortControl(
 
   const current =
     wireModel && routing.data
-      ? (routing.data.project.modelGenerationConfig?.[wireModel]?.reasoningEffort ?? null)
+      ? (routing.data?.project?.modelGenerationConfig?.[wireModel]?.reasoningEffort ?? null)
       : null;
   const canWrite = routing.data?.capabilities?.write ?? false;
 
   const setEffort = (next: string | null) => {
     if (!wireModel || !projectId || !routing.data) return;
-    const policy: GatewayProjectRoutingPolicy = routing.data.project;
+    const policy: GatewayProjectRoutingPolicy = routing.data?.project ?? { defaultModel: null, visionModel: null, defaultFallback: null, rules: [], modelGenerationConfig: {} };
     routing.set.mutate({
       ...policy,
       modelGenerationConfig: applyReasoningEffort(policy.modelGenerationConfig, wireModel, next),

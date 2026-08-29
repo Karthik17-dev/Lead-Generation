@@ -501,6 +501,16 @@ export async function pipedreamCatalogPage(input: {
   cursor?: string;
   limit?: number;
 }): Promise<PipedreamCatalogPage> {
+  if (!pipedreamConfigured()) {
+    return {
+      apps: [],
+      categories: [],
+      total: 0,
+      hasMore: false,
+      indexReady: true,
+      excludedNoActions: 0,
+    };
+  }
   const limit = input.limit && input.limit > 0 ? Math.min(input.limit, 100) : CATALOG_PAGE_SIZE;
   const { snapshot } = getCatalogSnapshot(crawlPage);
 
@@ -573,6 +583,9 @@ export async function pipedreamCatalogSections(input?: {
   perCategory?: number;
   maxCategories?: number;
 }): Promise<{ sections: PipedreamCatalogSection[]; categories: CatalogCategory[]; indexReady: boolean }> {
+  if (!pipedreamConfigured()) {
+    return { sections: [], categories: [], indexReady: true };
+  }
   const perCategory = input?.perCategory && input.perCategory > 0 ? Math.min(input.perCategory, 24) : 6;
   const maxCategories = input?.maxCategories && input.maxCategories > 0 ? Math.min(input.maxCategories, 40) : 12;
   const { snapshot } = getCatalogSnapshot(crawlPage);

@@ -62,7 +62,7 @@ const CATEGORY_ICON: Record<string, ComponentType<{ className?: string }>> = {
 };
 
 function categoryIcon(category: string): ComponentType<{ className?: string }> {
-  return CATEGORY_ICON[category.toLowerCase().replace(/[^a-z0-9]/g, '')] ?? FolderIcon;
+  return CATEGORY_ICON[(category || '').toLowerCase().replace(/[^a-z0-9]/g, '')] ?? FolderIcon;
 }
 
 /**

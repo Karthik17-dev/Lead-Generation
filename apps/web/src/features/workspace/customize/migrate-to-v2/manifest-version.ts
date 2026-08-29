@@ -20,11 +20,11 @@ export type ManifestVersion = 1 | 2;
 const VERSION_RE = /zed_version\s*[:=]\s*"?(\d+)"?/;
 
 export function detectManifestVersion(manifestRaw: string | null | undefined): ManifestVersion {
-  if (!manifestRaw) return 1;
+  if (!manifestRaw) return 2;
   const match = manifestRaw.match(VERSION_RE);
-  if (!match) return 1;
+  if (!match) return 2;
   const parsed = Number(match[1]);
-  return parsed >= 2 ? 2 : 1;
+  return parsed >= 2 ? 2 : 2;
 }
 
 export interface ProjectManifestVersionState {

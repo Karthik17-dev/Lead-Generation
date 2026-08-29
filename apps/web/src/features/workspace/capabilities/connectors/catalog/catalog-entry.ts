@@ -69,16 +69,29 @@ export function catalogEntryFromDiscover(connector: DiscoverConnector): CatalogE
   };
 }
 
-export function catalogEntryFromEasyConnect(app: PipedreamApp): CatalogEntry {
+export function catalogEntryFromEasyConnect(app: any): CatalogEntry {
+  const slug = app.slug || app.name_slug || 'unknown';
+  const name = app.name || app.name_formatted || slug;
   return {
     source: 'easy-connect',
-    app,
-    key: `easy-connect:${app.slug}`,
-    slug: app.slug,
-    name: app.name,
-    description: app.description,
-    icon: app.imgSrc,
-    categories: app.categories,
+    app: {
+      ...app,
+      slug,
+      name,
+      description: app.description || null,
+      imgSrc: app.imgSrc || app.img_src || null,
+      authType: app.authType || 'oauth',
+      categories: app.categories || [],
+      hasActions: app.hasActions ?? true,
+      hasTriggers: app.hasTriggers ?? true,
+      featuredWeight: app.featuredWeight ?? 100,
+    },
+    key: `easy-connect:${slug}`,
+    slug,
+    name,
+    description: app.description || null,
+    icon: app.imgSrc || app.img_src || null,
+    categories: app.categories || [],
     popularity: null,
   };
 }
@@ -88,8 +101,8 @@ export function catalogEntryFromEasyConnect(app: PipedreamApp): CatalogEntry {
  * into one comparable token: `Google Sheets`, `google-sheets` and
  * `google_sheets` all become `googlesheets`.
  */
-export function foldKey(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+export function foldKey(value?: string | null): string {
+  return (value || "").toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 /**

@@ -132,7 +132,8 @@ export function AnimatedComposerPlaceholder({
           initial={swap.initial}
           animate={swap.animate}
           exit={swap.exit}
-          className="absolute inset-0 block min-w-0 truncate"
+          className="absolute inset-0 block min-w-0 truncate"
+          suppressHydrationWarning
         >
           {variants[index]}
         </m.div>

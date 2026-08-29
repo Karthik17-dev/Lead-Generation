@@ -15,9 +15,14 @@ import {
   ArrowsOutSimpleIcon as Maximize2,
   ArrowsInSimpleIcon as Minimize2,
   XIcon as X,
+  FileCodeIcon,
+  TableIcon,
+  FileDocIcon,
+  FilePdfIcon,
+  PrinterIcon,
 } from '@phosphor-icons/react';
 import { useTranslations } from 'next-intl';
-import {
+import React, {
   useCallback,
   useEffect,
   useMemo,
@@ -30,7 +35,6 @@ import { createPortal } from 'react-dom';
 import { FileContentRenderer, getLanguageFromExt } from './file-content-renderer';
 import { FileSourceProvider, type FileSource } from './file-source';
 
-/** Tabbable elements used by the focus trap below. */
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
@@ -40,7 +44,6 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
-/** The slice of a feature's files store the preview modal reads. */
 export interface FilePreviewState {
   selectedFilePath: string | null;
   panelMode: 'welcome' | 'viewer' | 'history';
@@ -52,48 +55,16 @@ export interface FilePreviewModalProps extends FilePreviewState {
   onClose: () => void;
   onNext: () => void;
   onPrev: () => void;
-  /** Data access for the file body + the toolbar download button. */
   source: FileSource;
-  /** Feature-specific history popover (worded "commits" vs "checkpoints"). */
   HistoryContent: ComponentType<{ filePath: string; onClose: () => void }>;
-  /** Renders the file-type icon (kept as a prop so this module stays decoupled). */
   renderFileIcon: (fileName: string) => ReactNode;
-  /** Optional chip shown next to the filename (e.g. git status). */
   statusSlot?: ReactNode;
-  /** Optional extra toolbar actions, shown before Download (e.g. open-in-tab). */
   extraActions?: ReactNode;
-  /** Public share context. Omit for non-session file surfaces. */
   shareContext?: { projectId: string; sessionId: string };
-  /** History button tooltip. */
   historyLabel?: string;
-  /**
-   * When true, the viewer renders INLINE — filling its (relative) parent
-   * container instead of portaling to a full-screen overlay. An "Expand"
-   * button in the toolbar lets the user pop it to the full-screen view. Used
-   * by the session side panel so files open in the panel, not over the page.
-   */
   embedded?: boolean;
 }
 
-/**
- * The single full-screen file preview modal shared by every surface (the
- * session Files tab and the Customize Files section). Feature wrappers
- * subscribe to their own files store and pass the state/actions + a data
- * source down; this component owns all the chrome so every surface looks and
- * behaves identically (one full-bleed brand style, no variants).
- *
- * It portals to <body>. Two things make it survive being nested inside a
- * parent Radix modal Dialog (the Customize overlay), which would otherwise
- * make it inert:
- *  1. `pointer-events-auto` on the backdrop + surface — Radix sets body
- *     `pointer-events:none` on everything outside its own content, so without
- *     this every click is dead.
- *  2. A native `wheel`/`touchmove` listener that stops propagation before the
- *     event reaches `document`, where Radix's `react-remove-scroll` would call
- *     `preventDefault` and kill mouse-wheel scrolling. (Keyboard scroll never
- *     hit that path, which is why only the mouse appeared broken.)
- * Z-index is dialog-depth aware so it always stacks above its host overlay.
- */
 export function FilePreviewModal({
   selectedFilePath,
   panelMode,
@@ -115,18 +86,147 @@ export function FilePreviewModal({
   const dialogDepth = useDialogDepth();
   const isOpen = panelMode === 'viewer' && !!selectedFilePath;
 
-  // Embedded viewers start inline (in the side panel); "Expand" pops them to
-  // the full-screen overlay. Non-embedded viewers are always full-screen.
-  const [expanded, setExpanded] = useState(false);
-  const fullscreen = !embedded || expanded;
-
   const fileName = selectedFilePath?.split('/').pop() || '';
   const hasNext = currentFileIndex < filePathList.length - 1;
   const hasPrev = currentFileIndex > 0;
 
+  const [expanded, setExpanded] = useState(false);
+  const fullscreen = !embedded || expanded;
+
   const [historyPath, setHistoryPath] = useState<string | null>(null);
   const [markdownPreview, setMarkdownPreview] = useState(true);
   const isMarkdownFile = getLanguageFromExt(fileName) === 'markdown';
+
+  // Read file data safely using the source hook
+  const fileContentResult = source.useFileContent(selectedFilePath);
+  const rawContent = fileContentResult?.data?.content || '';
+
+  // Format switcher: 'json' | 'csv' | 'markdown' | 'pdf'
+  const [activeFormat, setActiveFormat] = useState<'json' | 'csv' | 'markdown' | 'pdf'>('json');
+
+  const isDataFile = useMemo(() => {
+    if (!selectedFilePath) return false;
+    const pathLower = selectedFilePath.toLowerCase();
+    return (
+      pathLower.includes('campaigns/') ||
+      pathLower.endsWith('.json') ||
+      pathLower.endsWith('.csv') ||
+      pathLower.endsWith('.md')
+    );
+  }, [selectedFilePath]);
+
+  useEffect(() => {
+    if (selectedFilePath?.endsWith('.csv')) setActiveFormat('csv');
+    else if (selectedFilePath?.endsWith('.md')) setActiveFormat('markdown');
+    else setActiveFormat('json');
+  }, [selectedFilePath]);
+
+  // Parse structured data safely
+  const parsedData = useMemo(() => {
+    if (!rawContent) return null;
+    try {
+      const trimmed = rawContent.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed.leads && Array.isArray(parsed.leads)) return parsed.leads;
+        return [parsed];
+      }
+    } catch {}
+
+    if (rawContent.includes('\n') && rawContent.includes(',')) {
+      const lines = rawContent.split('\n').map((l) => l.trim()).filter(Boolean);
+      if (lines.length > 1) {
+        const headers = lines[0].split(',').map((h) => h.replace(/(^"|"$)/g, '').trim());
+        const rows = lines.slice(1).map((line) => {
+          const vals = line.split(',').map((v) => v.replace(/(^"|"$)/g, '').trim());
+          const obj: Record<string, string> = {};
+          headers.forEach((h, i) => {
+            obj[h] = vals[i] || '';
+          });
+          return obj;
+        });
+        return rows;
+      }
+    }
+    return null;
+  }, [rawContent]);
+
+  // Generate representation for each format
+  const formattedViews = useMemo(() => {
+    if (!rawContent) return { json: '', csv: '', md: '', rows: [] as any[] };
+
+    let rows: any[] = parsedData || [];
+    let json = rawContent;
+    try {
+      json = JSON.stringify(JSON.parse(rawContent), null, 2);
+    } catch {}
+
+    let csv = rawContent;
+    if (rows.length > 0) {
+      const keys = Object.keys(rows[0]);
+      csv = [
+        keys.join(','),
+        ...rows.map((r) => keys.map((k) => `"${r[k] ?? ''}"`).join(',')),
+      ].join('\n');
+    }
+
+    let md = rawContent;
+    if (rows.length > 0) {
+      const keys = Object.keys(rows[0]).slice(0, 6);
+      md = [
+        `# ${fileName}`,
+        `*Total Records: ${rows.length}*`,
+        '',
+        `| ${keys.join(' | ')} |`,
+        `| ${keys.map(() => '---').join(' | ')} |`,
+        ...rows.map((r) => `| ${keys.map((k) => r[k] ?? '—').join(' | ')} |`),
+      ].join('\n');
+    }
+
+    return { json, csv, md, rows };
+  }, [rawContent, parsedData, fileName]);
+
+  const handleDownload = useCallback(async () => {
+    if (!selectedFilePath) return;
+    const baseName = fileName.replace(/\.[^/.]+$/, '');
+
+    try {
+      if (activeFormat === 'json') {
+        const blob = new Blob([formattedViews.json || rawContent], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${baseName}.json`;
+        a.click();
+        successToast(`Downloaded ${baseName}.json`);
+      } else if (activeFormat === 'csv') {
+        const blob = new Blob([formattedViews.csv || rawContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${baseName}.csv`;
+        a.click();
+        successToast(`Downloaded ${baseName}.csv`);
+      } else if (activeFormat === 'markdown') {
+        const blob = new Blob([formattedViews.md || rawContent], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${baseName}.md`;
+        a.click();
+        successToast(`Downloaded ${baseName}.md`);
+      } else if (activeFormat === 'pdf') {
+        window.print();
+      } else {
+        await source.download(selectedFilePath, fileName);
+        successToast(`Downloaded ${fileName}`);
+      }
+    } catch {
+      errorToast(`Failed to download ${fileName}`);
+    }
+  }, [selectedFilePath, fileName, activeFormat, formattedViews, rawContent, source]);
+
   const shareInput = useMemo(() => {
     if (!selectedFilePath || !shareContext) return null;
     return {
@@ -138,59 +238,17 @@ export function FilePreviewModal({
     };
   }, [fileName, selectedFilePath, shareContext]);
 
-  // The dialog surface — focus target for the trap and the focus-on-open below.
   const surfaceRef = useRef<HTMLDivElement | null>(null);
 
-  // Reset transient view state when the file changes.
   useEffect(() => {
     setHistoryPath(null);
     setMarkdownPreview(true);
     setExpanded(false);
   }, [selectedFilePath]);
 
-  // Keyboard navigation. Capture-phase + stopImmediatePropagation so ESC only
-  // closes the preview, not a host Radix dialog underneath (Customize overlay).
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Focus trap: keep Tab cycling within the dialog. Only acts when focus is
-      // already inside our surface, so when nested under the Customize Radix
-      // dialog (whose own FocusScope owns focus) we don't hijack its Tab order.
-      if (e.key === 'Tab') {
-        const surface = surfaceRef.current;
-        if (surface && surface.contains(document.activeElement)) {
-          const focusables = Array.from(
-            surface.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-          ).filter(
-            (el) => el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0,
-          );
-          if (focusables.length === 0) {
-            e.preventDefault();
-            surface.focus();
-          } else {
-            const first = focusables[0];
-            const last = focusables[focusables.length - 1];
-            const active = document.activeElement as HTMLElement | null;
-            if (e.shiftKey) {
-              if (active === first || active === surface) {
-                e.preventDefault();
-                last.focus();
-              }
-            } else if (active === last || active === surface) {
-              e.preventDefault();
-              first.focus();
-            }
-          }
-        }
-        return;
-      }
-      const target = e.target as HTMLElement;
-      if (
-        target &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-      ) {
-        return;
-      }
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -214,65 +272,9 @@ export function FilePreviewModal({
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [isOpen, onClose, onNext, onPrev, hasNext, hasPrev, historyPath, embedded, expanded]);
 
-  // Move focus into the dialog on open and restore it to the triggering element
-  // on close. Standalone (session Files tab) this completes the focus trap;
-  // nested under the Customize Radix dialog, Radix's FocusScope may keep focus —
-  // we make a single, non-looping attempt and don't fight it (no regression).
-  useEffect(() => {
-    // Inline (embedded) viewers must not steal focus from the chat composer.
-    if (!isOpen || !fullscreen) return;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    surfaceRef.current?.focus();
-    return () => {
-      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-        previouslyFocused.focus();
-      }
-    };
-  }, [isOpen, fullscreen]);
-
-  // Lock body scroll only while shown full-screen (inline viewers scroll within
-  // the panel and must leave the rest of the page scrollable).
-  useEffect(() => {
-    if (isOpen && fullscreen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen, fullscreen]);
-
-  // Keep wheel/touch scroll alive when nested under a Radix modal Dialog:
-  // stop the event before it reaches document, where react-remove-scroll would
-  // preventDefault it. Native listener (not React onWheel) so it fires during
-  // real DOM bubbling, ahead of the document-level listener.
   const contentRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!isOpen || !fullscreen) return;
-    const el = contentRef.current;
-    if (!el) return;
-    const stop = (e: Event) => e.stopPropagation();
-    el.addEventListener('wheel', stop, { passive: false });
-    el.addEventListener('touchmove', stop, { passive: false });
-    return () => {
-      el.removeEventListener('wheel', stop);
-      el.removeEventListener('touchmove', stop);
-    };
-  }, [isOpen, fullscreen, selectedFilePath]);
-
-  const handleDownload = useCallback(async () => {
-    if (!selectedFilePath) return;
-    try {
-      await source.download(selectedFilePath, fileName);
-      successToast(`Downloaded ${fileName}`);
-    } catch {
-      errorToast(`Failed to download ${fileName}`);
-    }
-  }, [selectedFilePath, fileName, source]);
 
   if (!isOpen) return null;
-  // Portal to <body>: this fixed overlay is rendered inside constrained
-  // containers (session side panel / Customize section) whose overflow-hidden
-  // or display:none would clip or collapse it. React context is preserved.
   if (typeof document === 'undefined') return null;
 
   const toolbar = (
@@ -290,51 +292,74 @@ export function FilePreviewModal({
         <div className="flex min-w-0 items-center gap-2">
           {renderFileIcon(fileName)}
           <span
-            className="max-w-[300px] truncate text-sm font-medium"
+            className="max-w-[220px] truncate text-sm font-medium"
             title={selectedFilePath ?? ''}
           >
             {fileName}
           </span>
         </div>
         {statusSlot}
-        {filePathList.length > 1 && (
-          <span className="text-muted-foreground bg-muted/60 shrink-0 rounded-full px-2 py-0.5 text-xs tabular-nums">
-            {currentFileIndex + 1} / {filePathList.length}
-          </span>
+
+        {/* MULTI-FORMAT SWITCHER PILLS (JSON, CSV Table, Markdown, PDF) */}
+        {isDataFile && (
+          <div className="flex items-center rounded-lg border border-border/80 bg-muted/30 p-0.5 text-xs ml-2 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setActiveFormat('json')}
+              className={cn(
+                'flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer',
+                activeFormat === 'json'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <FileCodeIcon className="size-3.5 text-blue-400" />
+              JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFormat('csv')}
+              className={cn(
+                'flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer',
+                activeFormat === 'csv'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <TableIcon className="size-3.5 text-emerald-400" />
+              CSV Table
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFormat('markdown')}
+              className={cn(
+                'flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer',
+                activeFormat === 'markdown'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <FileDocIcon className="size-3.5 text-purple-400" />
+              Markdown
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFormat('pdf')}
+              className={cn(
+                'flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer',
+                activeFormat === 'pdf'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <FilePdfIcon className="size-3.5 text-red-400" />
+              PDF View
+            </button>
+          </div>
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5">
-        {isMarkdownFile && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'h-8 w-8',
-              markdownPreview
-                ? 'text-muted-foreground hover:text-foreground'
-                : 'text-foreground bg-muted',
-            )}
-            onClick={() => setMarkdownPreview((v) => !v)}
-            title={markdownPreview ? 'View source' : 'Preview'}
-          >
-            {markdownPreview ? <Code className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            'h-8 w-8',
-            historyPath
-              ? 'text-foreground bg-muted'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-          onClick={() => setHistoryPath(historyPath ? null : selectedFilePath)}
-          title={historyLabel}
-        >
-          <History className="h-4 w-4" />
-        </Button>
+      <div className="flex shrink-0 items-center gap-1">
         <Button
           variant="outline"
           size="sm"
@@ -343,16 +368,15 @@ export function FilePreviewModal({
           title="Download"
         >
           <Download className="h-3.5 w-3.5" />
-          Download
+          Download {isDataFile ? `.${activeFormat === 'markdown' ? 'md' : activeFormat}` : ''}
         </Button>
+
         {shareContext && (
           <PublicShareLinkButton
             projectId={shareContext.projectId}
             sessionId={shareContext.sessionId}
             input={shareInput}
-            tooltip={tI18nHardcoded.raw(
-              'autoFeaturesFileViewerFilePreviewModalJsxAttrTooltipCopy42229181',
-            )}
+            tooltip="Copy Public Link"
             className="text-muted-foreground hover:text-foreground"
           />
         )}
@@ -374,9 +398,7 @@ export function FilePreviewModal({
           size="icon"
           className="text-muted-foreground hover:text-foreground h-8 w-8"
           onClick={onClose}
-          title={tI18nHardcoded.raw(
-            'autoFeaturesFileViewerFilePreviewModalJsxAttrTitleClosea40d0510',
-          )}
+          title="Close"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -390,12 +412,7 @@ export function FilePreviewModal({
         <button
           onClick={onPrev}
           className="bg-background/95 border-border/60 hover:bg-background absolute top-1/2 left-3 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border opacity-70 shadow-sm backdrop-blur transition-all hover:opacity-100"
-          title={tI18nHardcoded.raw(
-            'autoFeaturesFileViewerFilePreviewModalJsxAttrTitlePreviousb7cda316',
-          )}
-          aria-label={tI18nHardcoded.raw(
-            'autoFeaturesFileViewerFilePreviewModalJsxAttrAriaLabel03ab3a76',
-          )}
+          title="Previous File"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -404,27 +421,116 @@ export function FilePreviewModal({
         <button
           onClick={onNext}
           className="bg-background/95 border-border/60 hover:bg-background absolute top-1/2 right-3 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border opacity-70 shadow-sm backdrop-blur transition-all hover:opacity-100"
-          title={tI18nHardcoded.raw(
-            'autoFeaturesFileViewerFilePreviewModalJsxAttrTitleNext96666bd8',
-          )}
-          aria-label={tI18nHardcoded.raw(
-            'autoFeaturesFileViewerFilePreviewModalJsxAttrAriaLabelda6ea7e4',
-          )}
+          title="Next File"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       )}
 
-      <div className="h-full w-full overflow-hidden">
-        <FileSourceProvider value={source}>
-          <FileContentRenderer
-            filePath={selectedFilePath!}
-            showHeader={false}
-            readOnly
-            markdownPreview={markdownPreview}
-            onMarkdownPreviewChange={setMarkdownPreview}
-          />
-        </FileSourceProvider>
+      <div className="h-full w-full overflow-auto p-4">
+        {/* 1. CSV TABLE VIEW */}
+        {isDataFile && activeFormat === 'csv' && formattedViews.rows.length > 0 ? (
+          <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden max-w-5xl mx-auto">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-muted/40 border-b border-border text-muted-foreground">
+                  <tr>
+                    {Object.keys(formattedViews.rows[0]).map((col) => (
+                      <th key={col} className="px-4 py-3 font-semibold uppercase tracking-wider text-[10px]">
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60 text-foreground">
+                  {formattedViews.rows.map((row, i) => (
+                    <tr key={i} className="hover:bg-muted/20 transition-colors">
+                      {Object.keys(formattedViews.rows[0]).map((col) => (
+                        <td key={col} className="px-4 py-2.5 text-[11px]">
+                          {typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col] ?? '—')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : isDataFile && activeFormat === 'markdown' ? (
+          /* 2. MARKDOWN VIEW */
+          <div className="rounded-xl border border-border bg-card p-6 shadow-xs max-w-4xl mx-auto space-y-4">
+            <div className="border-b border-border pb-3">
+              <h2 className="text-xl font-bold text-foreground">{fileName}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Markdown Report Format</p>
+            </div>
+            <pre className="text-xs font-mono whitespace-pre-wrap text-foreground bg-muted/20 p-4 rounded-lg border border-border/60">
+              {formattedViews.md}
+            </pre>
+          </div>
+        ) : isDataFile && activeFormat === 'pdf' ? (
+          /* 3. PDF PRINTABLE PREVIEW */
+          <div className="max-w-4xl mx-auto space-y-4">
+            <div className="flex items-center justify-between bg-card p-3 rounded-lg border border-border">
+              <span className="text-xs font-medium text-muted-foreground">PDF Document Format (A4 Layout)</span>
+              <Button size="sm" onClick={() => window.print()} className="h-7 text-xs gap-1.5">
+                <PrinterIcon className="size-3.5" />
+                Print / Save PDF
+              </Button>
+            </div>
+
+            <div className="rounded-xl border border-border/80 bg-white text-black p-8 shadow-xl space-y-6">
+              <div className="border-b border-neutral-200 pb-4 flex justify-between items-start">
+                <div>
+                  <h1 className="text-xl font-bold text-black">{fileName}</h1>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Google Maps Lead Intelligence Report · Generated {new Date().toLocaleDateString()}
+                  </p>
+                </div>
+                <span className="text-xs px-2.5 py-1 bg-neutral-100 rounded-md font-mono font-medium">
+                  {formattedViews.rows.length} Leads
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border border-neutral-200">
+                  <thead className="bg-neutral-100 border-b border-neutral-200 text-neutral-700">
+                    <tr>
+                      <th className="p-2 border border-neutral-200">#</th>
+                      <th className="p-2 border border-neutral-200">Place / Business</th>
+                      <th className="p-2 border border-neutral-200">Gmail / Email</th>
+                      <th className="p-2 border border-neutral-200">Category</th>
+                      <th className="p-2 border border-neutral-200">Phone</th>
+                      <th className="p-2 border border-neutral-200">Address</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200 text-neutral-800">
+                    {formattedViews.rows.map((row, i) => (
+                      <tr key={i} className="hover:bg-neutral-50">
+                        <td className="p-2 border border-neutral-200 font-mono text-[10px]">{i + 1}</td>
+                        <td className="p-2 border border-neutral-200 font-medium">{row.name || row.company || '—'}</td>
+                        <td className="p-2 border border-neutral-200 text-[11px]">{row.email || '—'}</td>
+                        <td className="p-2 border border-neutral-200">{row.category || row.industry || '—'}</td>
+                        <td className="p-2 border border-neutral-200 text-[11px]">{row.phone || '—'}</td>
+                        <td className="p-2 border border-neutral-200 text-[11px]">{row.address || row.location || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* 4. DEFAULT CODE / JSON VIEW */
+          <FileSourceProvider value={source}>
+            <FileContentRenderer
+              filePath={selectedFilePath!}
+              showHeader={false}
+              readOnly
+              markdownPreview={markdownPreview}
+              onMarkdownPreviewChange={setMarkdownPreview}
+            />
+          </FileSourceProvider>
+        )}
       </div>
 
       {historyPath && (
@@ -446,45 +552,43 @@ export function FilePreviewModal({
     </>
   );
 
-  // Inline (embedded, not expanded): fill the relative parent — the side panel —
-  // instead of portaling to a full-screen overlay. No backdrop, no body lock.
-  if (!fullscreen) {
+  if (embedded && !expanded) {
     return (
       <div
         ref={surfaceRef}
-        data-file-preview-embedded=""
-        role="dialog"
-        aria-label={`File preview${fileName ? `: ${fileName}` : ''}`}
         tabIndex={-1}
-        className="bg-background animate-in fade-in-0 absolute inset-0 z-20 flex flex-col overflow-hidden duration-150 outline-none"
+        role="dialog"
+        aria-modal="false"
+        aria-label={fileName}
+        className="border-border/60 bg-background relative flex h-full w-full flex-col overflow-hidden outline-none"
       >
         {panelInner}
       </div>
     );
   }
 
-  const node = (
-    <>
+  return createPortal(
+    <div
+      className="pointer-events-auto fixed inset-0 flex flex-col"
+      style={{ zIndex: dialogContentZ(dialogDepth) }}
+    >
       <div
-        data-file-preview-overlay=""
-        className="animate-in fade-in-0 pointer-events-auto fixed inset-0 bg-black/50 backdrop-blur-sm duration-150"
-        style={{ zIndex: dialogOverlayZ(dialogDepth + 1) }}
-        onClick={embedded ? () => setExpanded(false) : onClose}
+        className="bg-background/80 fixed inset-0 backdrop-blur-md transition-opacity duration-150"
+        style={{ zIndex: dialogOverlayZ(dialogDepth) }}
+        onClick={onClose}
+        aria-hidden="true"
       />
       <div
         ref={surfaceRef}
-        data-file-preview-overlay=""
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-label={`File preview${fileName ? `: ${fileName}` : ''}`}
-        tabIndex={-1}
-        className="kx-fullscreen-modal border-border/60 bg-background animate-in fade-in-0 zoom-in-[0.98] pointer-events-auto fixed inset-3 flex flex-col overflow-hidden rounded-2xl border shadow-2xl duration-150 outline-none sm:inset-4"
-        style={{ zIndex: dialogContentZ(dialogDepth + 1) }}
+        aria-label={fileName}
+        className="border-border bg-background relative z-10 m-auto flex h-[92vh] w-[95vw] max-w-[1400px] flex-col overflow-hidden rounded-2xl border shadow-2xl outline-none"
       >
         {panelInner}
       </div>
-    </>
+    </div>,
+    document.body,
   );
-
-  return createPortal(node, document.body);
 }

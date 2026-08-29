@@ -28,7 +28,7 @@ function readRawEnv(): Partial<RuntimeEnv> {
   return {
     SUPABASE_URL: process.env.SUPABASE_URL || process.env.SUPABASE_PUBLIC_URL || process.env.ZED_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
     SUPABASE_ANON_KEY: process.env.ZED_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY,
-    BACKEND_URL: process.env.ZED_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL,
+    BACKEND_URL: process.env.ZED_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3001/api/v1',
     WEBHOOK_BASE_URL: process.env.ZED_PUBLIC_WEBHOOK_BASE_URL || process.env.NEXT_PUBLIC_WEBHOOK_BASE_URL || process.env.ZED_URL,
     BILLING_ENABLED: (process.env.ZED_PUBLIC_BILLING_ENABLED || process.env.NEXT_PUBLIC_BILLING_ENABLED) === 'true',
     MANAGED_PROVIDER_ENABLED: (process.env.ZED_PUBLIC_MANAGED_PROVIDER_ENABLED || process.env.NEXT_PUBLIC_MANAGED_PROVIDER_ENABLED) === 'true',

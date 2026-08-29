@@ -65,8 +65,8 @@ export function ToolsStep({
   });
 
   const apps = (appsQuery.data?.pages ?? [])
-    .flatMap((p) => p.apps)
-    .filter((a) => !SLACK_SLUGS.has(a.slug));
+    .flatMap((p) => p?.apps ?? [])
+    .filter((a) => a && a.slug && !SLACK_SLUGS.has(a.slug));
   const notConfigured =
     appsQuery.isError && /501|not configured/i.test((appsQuery.error as Error)?.message ?? '');
 

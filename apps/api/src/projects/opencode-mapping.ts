@@ -149,6 +149,25 @@ export async function ensureOpencodeSessionPin(input: {
   let sessions = listed.sessions;
   let resolved = resolveRootSessionId({ pinnedRootId: currentPin, sessions });
 
+  if (!resolved && sessions.length === 0) {
+    const ep = await sandboxOpencodeEndpoint(externalId, userId);
+    if (ep) {
+      const createRes = await fetch(`${ep.url}/session?directory=${encodeURIComponent(WORKSPACE)}`, {
+        method: 'POST',
+        headers: sandboxRuntimeRequestHeaders(ep.headers),
+        body: JSON.stringify({}),
+        signal: AbortSignal.timeout(3_000),
+      }).catch(() => null);
+      if (createRes && createRes.ok) {
+        const created = (await createRes.json()) as any;
+        if (created && created.id) {
+          resolved = created.id;
+          sessions = [created];
+        }
+      }
+    }
+  }
+
   if (!resolved) {
     return { pin: currentPin, changed: false, reason: 'not_ready', sessions };
   }

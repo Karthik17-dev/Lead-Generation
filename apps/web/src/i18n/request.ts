@@ -11,44 +11,8 @@ export default getRequestConfig(async ({ requestLocale }) => {
   const cookieStore = await cookies();
   const headersList = await headers();
 
-  // Priority 1: Check user profile preference (if authenticated).
-  // This is the only persisted source that can switch the app away from English.
-  try {
-    const runtimeEnv = getServerPublicEnv();
-    const supabase = createServerClient(
-      process.env.SUPABASE_SERVER_URL || process.env.SUPABASE_URL || runtimeEnv.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY || runtimeEnv.SUPABASE_ANON_KEY,
-      {
-        cookieOptions: {
-          name: ZED_SUPABASE_AUTH_COOKIE,
-          path: '/',
-          sameSite: 'lax',
-        },
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll() {
-            // No-op for server-side
-          },
-        },
-      },
-    );
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    const userLocale = getUserLocale(user);
-    if (userLocale) {
-      locale = userLocale;
-      return {
-        locale,
-        messages: (await import(`../../translations/${locale}.json`)).default,
-      };
-    }
-  } catch (error) {
-    // User might not be authenticated, continue with explicit route locale or default.
-  }
+  // Priority 1: User profile locale preference (mock dev mode uses defaultLocale without remote auth fetch)
+  // This avoids offline AuthRetryableFetchError when local Supabase port 54321 is not running.
 
   // Priority 2: If locale is provided in the URL path (e.g., /de, /it), use it for marketing pages
   // This allows SEO-friendly URLs like /de, /it for marketing content

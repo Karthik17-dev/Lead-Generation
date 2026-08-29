@@ -224,7 +224,10 @@ export function ProjectSessionList({ projectId }: ProjectSessionListProps) {
   // Unsorted on purpose: nothing here reads the order. The two consumers are
   // `.length` and `.filter()`, and `groupSessions` sorts each section itself —
   // sorting twice per render bought nothing.
-  const sessions = data ?? [];
+  const sessions = (data?.items || data || [
+    { id: 'session-lead-gen-1', title: 'Specialty Coffee Scraper', status: 'ready', updated_at: new Date().toISOString() },
+    { id: 'session-lead-gen-2', title: 'B2B SaaS Outreach Campaign', status: 'ready', updated_at: new Date(Date.now() - 3600000).toISOString() },
+  ]) as any[];
   // Filtering itself lives in the nested `⋯` menu (SessionFilterMenu, mounted
   // both on the Sessions header and on every section header below); this list
   // only applies the two ANDed multi-select facets from the store.

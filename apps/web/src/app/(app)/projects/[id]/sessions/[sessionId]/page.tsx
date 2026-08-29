@@ -106,7 +106,13 @@ import {
  */
 export default function ProjectSessionPage() {
   const { id: projectId, sessionId } = useParams<{ id: string; sessionId: string }>();
-  if (!projectId || !sessionId) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!projectId || !sessionId || !mounted) return null;
   return (
     <ProjectSessionView
       key={`${projectId}/${sessionId}`}

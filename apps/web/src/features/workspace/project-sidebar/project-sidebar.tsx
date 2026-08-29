@@ -24,6 +24,8 @@ import { ProjectSandboxAlert } from '@/features/workspace/project-sidebar/footer
 import { ProjectSessionList } from '@/features/workspace/project-sidebar/project-session-list';
 import {
   ProjectCustomizeNavItem,
+  ProjectLeadsNavItem,
+  ProjectOutreachNavItem,
   ProjectSettingsNavItem,
   useSettingsKeyboardShortcut,
 } from '@/features/workspace/project-sidebar/project-settings-nav';
@@ -201,6 +203,8 @@ export function ProjectSidebar({ projectId }: { projectId: string }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <ProjectCustomizeNavItem />
+              <ProjectLeadsNavItem />
+              <ProjectOutreachNavItem />
               {/* Apps belongs with Customize, not down in the bottom group: it
                   is a project surface you configure and operate, not a
                   late-arriving alert. Self-hides until the `apps` flag is on. */}

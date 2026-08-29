@@ -1838,12 +1838,8 @@ export const dbConnectorRouterDeps: ConnectorRouterDeps = {
         return { ok: true, connected: shared.connected };
       }
     : undefined,
-  listPipedreamApps: pipedreamConfigured()
-    ? (input) => pipedreamCatalogPage(input)
-    : undefined,
-  listPipedreamSections: pipedreamConfigured()
-    ? (input) => pipedreamCatalogSections(input)
-    : undefined,
+  listPipedreamApps: (input) => pipedreamCatalogPage(input),
+  listPipedreamSections: (input) => pipedreamCatalogSections(input),
   discoverConnectorAuth: discoverDraftConnectorAuth,
   listDiscoverConnectors: (input) => listConnectorCatalog(input),
   getDiscoverConnector: (id) => getConnectorCatalogDetail(id),
