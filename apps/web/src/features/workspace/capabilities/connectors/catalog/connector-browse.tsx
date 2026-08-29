@@ -1,3 +1,4 @@
+import * as React from 'react';
 'use client';
 
 import { ArrowLeftIcon, GlobeIcon, MonitorIcon, PlusIcon } from '@phosphor-icons/react';
@@ -61,27 +62,28 @@ function CatalogAffordance({ connected }: { connected: boolean }) {
  * `width`/`height` are set so the box is reserved before the image arrives and
  * the grid never reflows around a late favicon.
  */
-function ConnectorIcon({ icon, computer = false }: { icon: string | null; computer?: boolean }) {
-  if (!icon) {
+function ConnectorIcon({ icon, name, computer = false }: { icon: string | null; name?: string; computer?: boolean }) {
+  const [failed, setFailed] = React.useState(false);
+
+  if (!icon || failed) {
+    const initial = (name || 'C').charAt(0).toUpperCase();
     return (
-      <span className="bg-card flex size-9 shrink-0 items-center justify-center rounded-sm">
-        {computer ? <MonitorIcon className="size-5" /> : <GlobeIcon className="size-5" />}
+      <span className="bg-primary/10 text-primary border-border/40 flex size-9 shrink-0 items-center justify-center rounded-md border font-semibold text-xs shadow-xs">
+        {computer ? <MonitorIcon className="size-5" /> : initial}
       </span>
     );
   }
   return (
-    <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-sm">
-      {/* eslint-disable-next-line @next/next/no-img-element -- third-party
-          favicons on arbitrary hosts; the Next loader is bypassed anyway. */}
+    <span className="bg-card border-border/40 flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border p-1 shadow-xs">
       <img
         src={icon}
         alt=""
-        width={36}
-        height={36}
+        width={32}
+        height={32}
         loading="lazy"
         decoding="async"
-        referrerPolicy="no-referrer"
-        className="size-9 object-contain"
+        onError={() => setFailed(true)}
+        className="size-7 object-contain"
       />
     </span>
   );
